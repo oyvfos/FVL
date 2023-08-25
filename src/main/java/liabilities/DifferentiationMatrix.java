@@ -18,12 +18,10 @@ import org.joda.beans.impl.direct.DirectMetaBean;
 import org.joda.beans.impl.direct.DirectMetaProperty;
 import org.joda.beans.impl.direct.DirectMetaPropertyMap;
 
-import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.opengamma.strata.collect.tuple.Pair;
 import com.opengamma.strata.pricer.rate.RatesProvider;
 
-import product.PolicyFunction;
 import product.ResolvedPolicy;
 
 
