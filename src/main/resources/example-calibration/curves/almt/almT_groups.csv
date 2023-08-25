@@ -1,0 +1,7 @@
+,Group Name,Curve Type,Reference,Curve Name
+1,ALM-CALIB-CURVES,Forward,USD-LIBOR-3M,usdAssetZeroMonth3M
+2,ALM-CALIB-CURVES,Forward,EUR-EURIBOR-6M,AssetZeroMonth6M
+3,ALM-CALIB-CURVES,Discount,EUR,OisEsterCurveEurZeroMonth
+4,ALM-CALIB-CURVES,Discount,USD,OisSofrCurveUsdZeroMonth
+5,ALM-CALIB-CURVES,Forward,EUR-ESTR,OisEsterCurveEurZeroMonth
+6,ALM-CALIB-CURVES,Forward,USD-SOFR,OisSofrCurveUsdZeroMonth

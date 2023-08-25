@@ -1,0 +1,3 @@
+Curve Name,Value Type,Day Count,Interpolator,Left Extrapolator,Right Extrapolator
+EUR-DSCON-OIS,Zero,Act/360,Linear,Flat,Flat
+EUR-EURIBOR6M-IRS,Zero,Act/360,Linear,Flat,Flat

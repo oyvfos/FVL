@@ -1,0 +1,5 @@
+Curve Name,Value Type,Day Count,Interpolator,Left Extrapolator,Right Extrapolator
+usdAssetZeroMonth3M,Zero,Act/360,Linear,Flat,Flat
+AssetZeroMonth6M,Zero,Act/360,Linear,Flat,Flat
+OisEsterCurveEurZeroMonth,Zero,Act/360,Linear,Flat,Flat
+OisSofrCurveUsdZeroMonth,Zero,Act/360,Linear,Flat,Flat

@@ -1,0 +1,151 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.vivat</groupId>
+  <artifactId>test</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
+   <dependencies>
+ 
+   <dependency>
+        <groupId>com.google.guava</groupId>
+        <artifactId>guava</artifactId>
+        <version>${guava.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>com.google.errorprone</groupId>
+            <artifactId>error_prone_annotations</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>com.google.j2objc</groupId>
+            <artifactId>j2objc-annotations</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>animal-sniffer-annotations</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.checkerframework</groupId>
+            <artifactId>checker-qual</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>com.google.code.findbugs</groupId>
+            <artifactId>jsr305</artifactId>
+          </exclusion>
+        </exclusions>
+     </dependency>
+     <dependency>
+        <groupId>org.joda</groupId>
+        <artifactId>joda-convert</artifactId>
+        <version>${joda-convert.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.joda</groupId>
+        <artifactId>joda-beans</artifactId>
+        <version>${joda-beans.version}</version>
+      </dependency>
+      <!-- <dependency>
+      <groupId>org.testng</groupId>
+      <artifactId>testng</artifactId>
+      <version>${testng.version}</version>
+    </dependency> -->
+  <dependency>
+  <groupId>com.opengamma.strata</groupId>
+  <artifactId>strata-measure</artifactId>
+  <version>2.1.0</version>
+	</dependency>
+	<dependency>
+  <groupId>com.opengamma.strata</groupId>
+  <artifactId>strata-collect</artifactId>
+  <version>2.1.0</version>
+	</dependency>
+	<dependency>
+  <groupId>com.opengamma.strata</groupId>
+  <artifactId>strata-report</artifactId>
+  <version>2.1.0</version>
+	</dependency>
+	<dependency>
+    <groupId>org.apache.commons</groupId>
+    <artifactId>commons-math3</artifactId>
+    <version>3.5</version>
+</dependency>   
+
+  <!-- <dependency>
+    <groupId>org.renjin</groupId>
+    <artifactId>renjin-script-engine</artifactId>
+    <version>0.9.2719</version>
+  </dependency> -->
+  </dependencies>
+<!-- <repositories>
+  <repository>
+    <id>bedatadriven</id>
+    <name>bedatadriven public repo</name>
+    <url>http://nexus.bedatadriven.com/content/groups/public/</url>
+  </repository>
+</repositories>
+ -->   
+ 
+    <build>
+    <plugins>
+		
+      <plugin>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <version>3.0.0</version>
+        <configuration>
+          <descriptorRefs>
+            <descriptorRef>jar-with-dependencies</descriptorRef>
+          </descriptorRefs>
+        </configuration>
+        <executions>
+          <execution>
+            <id>make-assembly</id> <!-- this is used for inheritance merges -->
+            <phase>package</phase> <!-- bind to the packaging phase -->
+            <goals>
+              <goal>single</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <executions>
+     <execution>
+       <id>default-compile</id>
+       <phase>compile</phase>
+       <goals>
+          <goal>compile</goal>
+       </goals>
+       <configuration>
+         <skipMain>true</skipMain> 
+       </configuration>
+     </execution>
+   </executions>
+        
+        <version>3.6.1</version>
+        <configuration>
+          <source>1.8</source>
+          <target>1.8</target>
+         
+          
+        </configuration>
+      </plugin>
+      </plugins>
+      </build> 
+      
+     <properties>
+    
+   <assertj.version>3.12.0</assertj.version>
+    <guava.version>26.0-jre</guava.version><!-- v27 has nasty dependencies, https://github.com/google/guava/issues/3320 -->
+    <guava-docs.version>snapshot</guava-docs.version>
+    <jcommander.version>1.72</jcommander.version>
+    <joda-convert.version>2.2.0</joda-convert.version>
+    <joda-beans.version>2.4.0</joda-beans.version>
+    <!-- Not installed/deployed -->
+    <maven.install.skip>true</maven.install.skip>
+    <maven.deploy.skip>true</maven.deploy.skip>
+    <!-- JavaFX -->
+    <javafx.jar.path>${java.home}\lib\ext\jfxrt.jar</javafx.jar.path>
+    <!-- Properties for maven-javadoc-plugin -->
+    <windowtitle>OpenGamma Strata Examples</windowtitle>
+    <doctitle><![CDATA[<h1>OpenGamma Strata Examples</h1>]]></doctitle>
+  </properties>
+</project>

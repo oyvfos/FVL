@@ -1,0 +1,10 @@
+Strata Trade Type,Id Scheme,Id,Leg 1 Start Date,Leg 1 End Date,Leg 1 Payment Frequency,Currency,Notional,Leg 1 Direction,Leg 1 Frequency, Leg 1 Index, Leg 1 Gearing, Leg 1 Inflation Lag, Leg 1 Compounding Method,Leg 1 Compounding Method, Leg 1 Negative Rate Method, Leg 1 Notional Final Exchange
+Swap,VAL,Leg1,2007-06-31,2025-06-31,Term, EUR,5158814,Receive,1Y,EU-EXT-CPI,0.65,10M, Straight, Not Negative,True
+
+#Leg column name						Mandatory?	Example/Format			Description
+#Leg 1 Index							Mandatory	GB-RPI (values)			The Price index
+#Leg 1 Inflation Lag					Optional	3M (formats)			The lag used when reading the price index, defaults from the index
+#Leg 1 Inflation Method				Optional	Interpolated (values)	The method to use, defaults from the currency
+#Leg 1 Inflation First Index Value	Optional	154.3					The value of the price index at the start of the swap
+#Leg 1 Gearing						Optional	1.5						The gearing multiplier
+#2.1895, Buy, 2007-07-01,EUR-FIXED-ZC-EU-EXT-CPI,Buy,,40Y,34203735,
