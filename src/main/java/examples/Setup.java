@@ -268,8 +268,8 @@ public class Setup {
 	  //Class<SecuritizedProductTrade<FixedCouponBond>> targetType = null;
 	  CalculationFunctions fn2 = CalculationFunctions.of(new PolicyTradeCalculationFunction());
 	  CalculationFunctions functions = StandardComponents.calculationFunctions()
-			  .composedWith(FixedCouponBondTradeCalculationFunction1.INSTANCE)
-			  .composedWith(new PresentValueWithZspread())
+			  //.composedWith(FixedCouponBondTradeCalculationFunction1.INSTANCE)
+			  //.composedWith(new PresentValueWithZspread())
 			  .composedWith(fn2);
 	  
 	  

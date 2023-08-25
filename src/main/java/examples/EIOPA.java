@@ -32,6 +32,7 @@ import com.opengamma.strata.market.curve.node.FixedIborSwapCurveNode;
 import com.opengamma.strata.market.observable.QuoteId;
 import com.opengamma.strata.market.param.ParameterMetadata;
 import com.opengamma.strata.market.param.TenorParameterMetadata;
+import com.opengamma.strata.math.impl.interpolation.SmithWilsonCurveFunction;
 import com.opengamma.strata.product.swap.type.FixedIborSwapTemplate;
 
 
