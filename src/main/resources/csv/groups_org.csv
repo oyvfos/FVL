@@ -1,0 +1,7 @@
+Group Name,Curve Type,Reference,Curve Name
+Default,Discount,EUR,USD-Disc
+Default,Forward,USD-FED-FUND,USD-Disc
+Default,Forward,EUR-EURIBOR-3M,USD-Disc
+Default,Forward,EUR-EURIBOR-6M,USD-Disc
+Default,Discount,GBP,GBP-Disc
+Default,Forward,GBP-LIBOR-3M,GBP-3ML
