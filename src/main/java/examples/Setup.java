@@ -2,7 +2,6 @@ package examples;
 
 
 import static com.opengamma.strata.basics.currency.Currency.EUR;
-import static com.opengamma.strata.basics.date.DayCounts.ACT_365F;
 import static com.opengamma.strata.basics.index.PriceIndices.EU_EXT_CPI;
 import static com.opengamma.strata.loader.csv.CsvLoaderColumns.CURRENCY_FIELD;
 import static com.opengamma.strata.loader.csv.CsvLoaderColumns.END_DATE_FIELD;
@@ -10,8 +9,6 @@ import static com.opengamma.strata.loader.csv.CsvLoaderColumns.FIXED_RATE_FIELD;
 import static com.opengamma.strata.loader.csv.CsvLoaderColumns.NOTIONAL_FIELD;
 import static com.opengamma.strata.loader.csv.CsvLoaderColumns.SECURITY_ID_FIELD;
 import static com.opengamma.strata.loader.csv.CsvLoaderColumns.SECURITY_ID_SCHEME_FIELD;
-import static com.opengamma.strata.market.curve.interpolator.CurveInterpolators.LINEAR;
-import static java.util.stream.Collectors.toList;
 
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -22,17 +19,14 @@ import java.text.ParseException;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import java.util.stream.DoubleStream;
 import java.util.stream.IntStream;
 
 import javax.script.ScriptException;
 
-import org.ejml.simple.SimpleMatrix;
 import org.joda.convert.FromString;
 
 import com.google.common.collect.ImmutableList;
@@ -72,9 +66,7 @@ import com.opengamma.strata.calc.marketdata.ScenarioDefinition;
 import com.opengamma.strata.calc.marketdata.TimeSeriesProvider;
 import com.opengamma.strata.calc.runner.CalculationFunctions;
 import com.opengamma.strata.collect.ArgChecker;
-import com.opengamma.strata.collect.MapStream;
 import com.opengamma.strata.collect.array.DoubleArray;
-import com.opengamma.strata.collect.io.CsvFile;
 import com.opengamma.strata.collect.io.CsvIterator;
 import com.opengamma.strata.collect.io.CsvRow;
 import com.opengamma.strata.collect.io.ResourceLocator;
@@ -87,7 +79,6 @@ import com.opengamma.strata.data.MarketDataId;
 import com.opengamma.strata.data.MarketDataName;
 import com.opengamma.strata.data.scenario.MarketDataBox;
 import com.opengamma.strata.data.scenario.ScenarioMarketData;
-import com.opengamma.strata.examples.marketdata.ExampleData;
 import com.opengamma.strata.loader.LoaderUtils;
 import com.opengamma.strata.loader.csv.QuotesCsvLoader;
 import com.opengamma.strata.loader.csv.RatesCalibrationCsvLoader;
@@ -112,12 +103,6 @@ import com.opengamma.strata.market.param.ParameterMetadata;
 import com.opengamma.strata.market.param.ParameterizedData;
 import com.opengamma.strata.market.param.PointShifts;
 import com.opengamma.strata.market.param.PointShiftsBuilder;
-import com.opengamma.strata.market.surface.InterpolatedNodalSurface;
-import com.opengamma.strata.market.surface.Surface;
-import com.opengamma.strata.market.surface.SurfaceMetadata;
-import com.opengamma.strata.market.surface.Surfaces;
-import com.opengamma.strata.market.surface.interpolator.GridSurfaceInterpolator;
-import com.opengamma.strata.market.surface.interpolator.SurfaceInterpolator;
 import com.opengamma.strata.measure.Measures;
 import com.opengamma.strata.measure.StandardComponents;
 import com.opengamma.strata.measure.bond.LegalEntityDiscountingMarketDataLookup;
@@ -126,7 +111,6 @@ import com.opengamma.strata.measure.swaption.SwaptionMarketDataLookup;
 import com.opengamma.strata.pricer.DiscountFactors;
 import com.opengamma.strata.pricer.curve.RatesCurveCalibrator;
 import com.opengamma.strata.pricer.rate.ImmutableRatesProvider;
-import com.opengamma.strata.pricer.swaption.SwaptionSurfaceExpiryTenorParameterMetadata;
 import com.opengamma.strata.pricer.swaption.SwaptionVolatilitiesId;
 import com.opengamma.strata.product.LegalEntityId;
 import com.opengamma.strata.product.SecurityId;
@@ -140,21 +124,14 @@ import com.opengamma.strata.report.trade.TradeReport;
 import com.opengamma.strata.report.trade.TradeReportTemplate;
 
 import liabilities.AbsoluteDoubleShift;
-import liabilities.DifferentiationMatrix;
-import liabilities.DifferentiationMatrixId;
-import liabilities.MortalityRates;
 import liabilities.NonObservableId;
-import liabilities.TransitionRatesId;
 import measure.PolicyTradeCalculationFunction;
 import product.ImmutablePolicyConvention;
-import product.PolicyConvention;
 import product.StandardPolicyConventions;
 import umontreal.ssj.rng.MRG31k3p;
 import umontreal.ssj.rng.RandomStream;
 import umontreal.ssj.stochprocess.OrnsteinUhlenbeckProcess;
 import utilities.HWAnalytical;
-import utilities.Taylor;
-import valILS.ILS;
 public class Setup {
 	
 	
