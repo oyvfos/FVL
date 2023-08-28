@@ -13,7 +13,7 @@ import com.opengamma.strata.market.curve.CurveGroupName;
 import com.opengamma.strata.market.curve.CurveId;
 import com.opengamma.strata.market.curve.CurveName;
 
-import mavenBlue.Setup.ParamaterName;
+import examples.Setup.ParamaterName;
 import java.lang.invoke.MethodHandles;
 import org.joda.beans.JodaBeanUtils;
 import org.joda.beans.MetaBean;
