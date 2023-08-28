@@ -260,7 +260,7 @@ public class Setup {
 	  final CurveId ISSUER_CURVE_ID1 = CurveId.of("GOVT","EUR-DSC");
 	  final CurveId REPO_CURVE_ID1 = CurveId.of( "GOVT1 BOND1","OG-Ticker");
 	  final RepoGroup GROUP_REPO_V1 = RepoGroup.of("BONDS");
-	  final LegalEntityGroup GROUP_ISSUER_V1 = LegalEntityGroup.of("ATHORA");
+	  final LegalEntityGroup GROUP_ISSUER_V1 = LegalEntityGroup.of("INSURER");
   
 	  
 	  //Functions
@@ -428,30 +428,7 @@ public class Setup {
 		        MarketDataFilter.ofName(CurveName.of("ESG")),
 		        builderP.build()
 	);
-//		  PerturbationMapping<ParameterizedData> mapping2 = PerturbationMapping.of(
-//				  MarketDataFilter.ofName(CurveName.of("ESG")),
-//			        // no shift for the base scenario, 1bp absolute shift to calibrated curves (zeros)
-//			        buildShifts(curveESG,ResourceLocator.of("file:src/main/resources/csv/scen2_R10K (1).csv")));
-//		PerturbationMapping<ParameterizedData> mapping3 = PerturbationMapping.of(
-//				  MarketDataFilter.ofName(CurveName.of("Equity")),
-//			        // no shift for the base scenario, 1bp absolute shift to calibrated curves (zeros)
-//			        buildShifts(curveEQ,ResourceLocator.of("file:src/main/resources/csv/scen2_S10K (2).csv")));
-//		  
 //		 
-		  //ScenarioDefinition scenarioDefinition = ScenarioDefinition.ofMappings(mapping,mappingPar);
-		  //ScenarioDefinition scenarioDefinition = ScenarioDefinition.ofMappings(mappingPar,mapping_bp);
-		  //ScenarioDefinition scenarioDefinition = ScenarioDefinition.ofMappings(mappingPar,mapping_bp);
-		//ScenarioDefinition scenarioDefinition = ScenarioDefinition.ofMappings(mapping_deb);
-//		PerturbationMapping<ParameterizedData> mapping2 = PerturbationMapping.of(
-//				  MarketDataFilter.ofName(CurveName.of("ESG")),
-//			        // no shift for the base scenario, 1bp absolute shift to calibrated curves (zeros)
-//			        buildShifts1(curveESG,1));
-//		PerturbationMapping<ParameterizedData> mapping3 = PerturbationMapping.of(
-//				  MarketDataFilter.ofName(CurveName.of("Equity")),
-//			        // no shift for the base scenario, 1bp absolute shift to calibrated curves (zeros)
-//			        buildShifts1(curveEQ,5));
-//		 ScenarioDefinition scenarioDefinition = ScenarioDefinition.ofMappings(mapping2, mapping3);
-//		 //
 		ScenarioDefinition scenarioDefinition = ScenarioDefinition.empty();
 		  //LabelDateParameterMetadataBuilder nodes= LabelDateParameterMetadataBuilder.builder();
 		  
@@ -537,41 +514,7 @@ public class Setup {
 	    return builder.build();
 	   //return  CurvePointShifts.builder(ShiftType.ABSOLUTE).build();
 	  }
-	private static PointShifts buildShifts(Curve basisCurve, ResourceLocator resource) {
-		PointShiftsBuilder  builder = PointShifts.builder(ShiftType.ABSOLUTE);
-	    CsvFile csv = CsvFile.of(resource.getCharSource(), false);
-	    //Map<CurveName, List<CurveNode>> allNodes = new HashMap<>();
-		double a0=0.001258720889208218;
-		double b0=0.00013;
-		double s0=0.00349;
-	    HWAnalytical HW = new HWAnalytical(a0,b0,s0);
-	    for (int curveNodeIdxCSV = 0; curveNodeIdxCSV< (csv.rowCount()-2); curveNodeIdxCSV++) {
-	      ImmutableList<String> scenarios = csv.row(curveNodeIdxCSV).fields().subList(5000,9999);
-	    	//ImmutableList<String> scenarios = csv.row(curveNodeIdxCSV).fields();
-	      List<ParameterMetadata> curveNodeMetadata = basisCurve.getMetadata().getParameterMetadata().get();
-		    
-	      // build up the shifts to apply to each node
-	      // these are calculated as the actual change in the zero rate at that node between the two scenarios 
-	      // for each row
-	      int scenarioIndex = 0;
-	      //double fwdRate = basisCurve.yValue(curveNodeIdxCSV);
-	      //double initrate= basisCurve.yValue(0);
-	      //double fwdRate = Math.log(HWAnalytical.price(0d, Double.valueOf(curveNodeIdxCSV), initrate)/HWAnalytical.price(0d, Double.valueOf(curveNodeIdxCSV+1), initrate));
-	      for (String item:scenarios) { //column iterations		
-	    	//  if (basisCurve.getName().toString()=="DFAScen1") {	  
-	        //double zeroRate = basisCurve.yValue(curveNodeIdx);
-	        //System.out.println(zeroRate);
-	    	  
-	        double shift = Double.parseDouble(item);
-	        //builder.addShift(scenarioIndex, curveNodeMetadata.get(curveNodeIdx).getIdentifier(), 0d);
-	        builder.addShift(scenarioIndex, curveNodeMetadata.get(curveNodeIdxCSV).getIdentifier(), shift);
-	        scenarioIndex++;
-	        
-	      }
-	    }
-	    return builder.build();
-	   //return  CurvePointShifts.builder(ShiftType.ABSOLUTE).build();
-	  }
+	
 	static  CsvIterator cvs= CsvIterator.of(ResourceLocator.of("classpath:referenceData/refData.csv").getCharSource(), true);
 	//Bond reference data
 	private static final FixedCouponBondYieldConvention YIELD_CONVENTION = FixedCouponBondYieldConvention.DE_BONDS;
@@ -645,195 +588,7 @@ public class Setup {
 
 static ImmutableMap.Builder<ReferenceDataId<?>, Object> builderRefData = ImmutableMap.builder();
 	
-public static Surface addRefDatafromCSV(String csv, String name) {
-		
-	CsvIterator mortalityrates= CsvIterator.of(ResourceLocator.of("classpath:referenceData/" + csv).getCharSource(), true);
-	ArrayList<Integer> AGE = new ArrayList<Integer>();
-	ArrayList<Integer> YEAR =new ArrayList<Integer>();
-	ArrayList<Double> RATE = new ArrayList<Double>();;
-	for (CsvRow row : mortalityrates.asIterable()) {
-	      //Currency  cur= row.getValue(CURRENCY_FIELD, LoaderUtils::parseCurrency);
-	      YEAR.add(row.getValue("YEAR", LoaderUtils::parseInteger));
-	      AGE.add(row.getValue("AGE",LoaderUtils::parseInteger));
-	      RATE.add(row.getValue("rate",LoaderUtils::parseDouble));
-		}
-	
-	final SurfaceInterpolator INTERPOLATOR_2D = GridSurfaceInterpolator.of(LINEAR, LINEAR);
-	
-	final List<ParameterMetadata> PARAMETER_METADATA =
-		      MapStream.zip(AGE.stream(), YEAR.stream())
-		          .map(SwaptionSurfaceExpiryTenorParameterMetadata::of)
-		          .collect(toList());
-		  final SurfaceMetadata METADATA =
-		      Surfaces.normalVolatilityByExpiryTenor(name, ACT_365F);
-		  
-		  final Surface SURFACE_STD = InterpolatedNodalSurface.of(
-		          METADATA.withParameterMetadata(PARAMETER_METADATA),
-		          DoubleArray.copyOf(AGE.stream().mapToDouble(num -> (double)num).toArray()),
-		          DoubleArray.copyOf(YEAR.stream().mapToDouble(num -> (double)num).toArray()),	
-		          DoubleArray.copyOf(RATE.stream() //we start with a stream of objects Stream<int[]>
-		        		    .flatMapToDouble(DoubleStream::of) //we I'll map each int[] to IntStream
-		        		    .toArray()),
-		          INTERPOLATOR_2D);
-	
-	return SURFACE_STD;
-	
-}
-static{
-	builderRefData
-	.put(TransitionRatesId.of("OG-Ticker", "AAG-M"), MortalityRates.of(TransitionRatesId.of("OG-Ticker", "AAG-M"), VAL_DATE, addRefDatafromCSV("AG2018_man.csv","AAG-man")))
-	.put(TransitionRatesId.of("OG-Ticker", "AAG-V"), MortalityRates.of(TransitionRatesId.of("OG-Ticker", "AAG-V"), VAL_DATE, addRefDatafromCSV("AG2018_vrouw.csv","AAG-vrouw")))
-	.put(TransitionRatesId.of("OG-Ticker", "PORT-M"), MortalityRates.of(TransitionRatesId.of("OG-Ticker", "PORT-M"), VAL_DATE, addRefDatafromCSV("PORT_STERFTE_MAN_2019.csv","portf-man")))
-	.put(TransitionRatesId.of("OG-Ticker", "PORT-V"), MortalityRates.of(TransitionRatesId.of("OG-Ticker", "PORT-V"), VAL_DATE, addRefDatafromCSV("PORT_STERFTE_VRW_2019.csv","portf-vrouw")))
-	.put(TransitionRatesId.of("OG-Ticker", "207"), MortalityRates.of(TransitionRatesId.of("OG-Ticker", "207"), VAL_DATE, addRefDatafromCSV("ZL1001SN.csv","207")))
-	.put(TransitionRatesId.of("OG-Ticker", "220"), MortalityRates.of(TransitionRatesId.of("OG-Ticker", "220"), VAL_DATE, addRefDatafromCSV("PREMTAB21POSNEG.csv","220")))
-	.put(TransitionRatesId.of("OG-Ticker", "221"), MortalityRates.of(TransitionRatesId.of("OG-Ticker", "221"), VAL_DATE, addRefDatafromCSV("PREMTAB32NEG.csv","221")))
-	.put(TransitionRatesId.of("OG-Ticker", "VERVAL_UL_2019M"), MortalityRates.of(TransitionRatesId.of("OG-Ticker", "VERVAL_UL_2019M"), VAL_DATE, addRefDatafromCSV("VERVAL_UL_2019M.csv","verv-man")))
-	.put(TransitionRatesId.of("OG-Ticker", "VERVAL_UL_2019V"), MortalityRates.of(TransitionRatesId.of("OG-Ticker", "VERVAL_UL_2019V"), VAL_DATE, addRefDatafromCSV("VERVAL_UL_2019V.csv","verv-vrouw")))
-	.build();
-	REF_DATA= REF_DATA.combinedWith((ImmutableReferenceData) ImmutableReferenceData.of(builderRefData.build()));
-}
-//
-static ImmutableMap.Builder<ReferenceDataId<?>, Object> builderRefData1 = ImmutableMap.builder();
-//static{
-//	double a0=0.001258720889208218;
-//	double b0=0.00013;
-//	double s0=0.00349;
-//	double stepsizes2=0.01;//rente  
-//	double stepsizes3=0.05;//eq 
-//	double stepsize1=.5d;//fonds
-//	double s1= 5*s0;
-//	double b1= .5d*b0;
-//	
-//	List<Double> g2 = IntStream.range(-2, 3).mapToDouble(i -> i*stepsizes2).boxed().toList();//rente
-// 	//Object[] g2 = IntStream.range(-2, 3).mapToDouble(i -> i*stepsize1+1).boxed().toArray();
-//	List<Double> g1 = IntStream.range(-1, 7).mapToDouble(i -> i*stepsize1 ).boxed().toList();
-//	List<Double> g3 = IntStream.range(-2,3).mapToDouble(i -> i*stepsizes3).boxed().toList();//eq
-// 	List<List<Double>> s = Lists.cartesianProduct(g1,g2,g3);
-// 	List<Object> l= new ArrayList<Object>();
-// 	l.add(1.0);
-// 	l.add(0.0);
-// 	l.add(0.0);
-// 	int ind= s.indexOf(l);
-// 	//s vectors
-// 	DoubleArray s2 = DoubleArray.copyOf(Taylor.toArray(0,s));
-// 	DoubleArray s3 = DoubleArray.copyOf(Taylor.toArray(1,s));
-// 	DoubleArray s4 = DoubleArray.copyOf(Taylor.toArray(2,s));
-// 	int size = g1.size()*g2.size()*g3.size();
-// 	//test
-// 	//SimpleMatrix sm1 = new SimpleMatrix(5, 5,false, s3.toArray());
-// 	//end
-// 	SimpleMatrix s2S = new SimpleMatrix(size, 1,true, s2.toArray()); 
-// 	SimpleMatrix s3S = new SimpleMatrix(size, 1,true, s3.toArray());
-// 	SimpleMatrix s4S = new SimpleMatrix(size, 1,true, s4.toArray());
-// 	
-// 	SimpleMatrix ds2S = SimpleMatrix.identity(g1.size());
-// 	SimpleMatrix ds3S= SimpleMatrix.identity(g2.size());
-// 	SimpleMatrix ds4S= SimpleMatrix.identity(g3.size());
-// // Differentiation matrices
-// 	SimpleMatrix s2DerivFirstS = Taylor.UDFtoMatrixS(g1.size(),1,2,stepsize1).kron(ds3S).kron(ds4S);//;
-// 	SimpleMatrix s3DerivFirstS = ds2S.kron(Taylor.UDFtoMatrixS(g2.size(),1,2,stepsizes2)).kron(ds4S);//.kron(ds4S));
-// 	SimpleMatrix s4DerivFirstS = ds2S.kron(ds3S).kron(Taylor.UDFtoMatrixS(g3.size(),1,2,stepsizes3));//;
-// 	
-// 	SimpleMatrix s3DerivSecS =  Taylor.UDFtoMatrixS(g1.size(),2,3,stepsizes2).kron(ds3S).kron(ds4S);
-// 	SimpleMatrix s4DerivSecS =  ds2S.kron(ds3S).kron(Taylor.UDFtoMatrixS(g3.size(),2,3,stepsizes3));
-// 	//SimpleMatrix s4DerivFirstS = ds2S.kron(ds3S);
-// 	
-// 	SimpleMatrix dS= SimpleMatrix.identity(size);
-// 	//SimpleMatrix dSDet= SimpleMatrix.identity(g2.length);
-// 	SimpleMatrix p3S = s3DerivSecS.scale(.5*s0*s0);
-// 	SimpleMatrix q3S = s4DerivSecS.scale(.5*s1*s1);
-// 	//SimpleMatrix t2S = SimpleMatrix.diag(s2.multipliedBy(-b0).plus(a0).toArray());
-// 	List<double[]> cop = Collections.nCopies(dS.numCols(), s3.multipliedBy(-b0).plus(a0).toArray());
-// 	double[] vals = cop.stream().flatMapToDouble(x -> Arrays.stream(x)).toArray();
-// 	SimpleMatrix sm1 = new SimpleMatrix(dS.numCols(), dS.numCols(), false, vals);
-// 	SimpleMatrix p4S=s3DerivFirstS.elementMult(sm1);
-// 	
-// 	cop = Collections.nCopies(dS.numCols(), s4.multipliedBy(-b1).plus(a0).toArray());
-// 	vals = cop.stream().flatMapToDouble(x -> Arrays.stream(x)).toArray();
-// 	sm1 = new SimpleMatrix(dS.numCols(), dS.numCols(), false, vals);
-// 	SimpleMatrix q4S=s4DerivFirstS.elementMult(sm1);
-// 	
-// 	
-// 	//t2S.convertToSparse();
-// 	//SimpleMatrix p4S = s2DerivFirstS.mult(t2S);
-// 	//s3DerivFirstS.convertToSparse();
-// 	p3S.convertToSparse();
-// 	p4S.convertToSparse();
-// 	q3S.convertToSparse();
-// 	q4S.convertToSparse();
-// 	dS.convertToSparse();
-//// 	builderRefData1
-//// 	.put(DifferentiationMatrixId.of("OG-Ticker", "ind"), DifferentiationMatrix.of(DifferentiationMatrixId.of("OG-Ticker", "ind"), SimpleMatrix.diag(ind)))
-//// 	.put(DifferentiationMatrixId.of("OG-Ticker", "s2S"), DifferentiationMatrix.of(DifferentiationMatrixId.of("OG-Ticker", "s2S"), s2S))
-//// 	.put(DifferentiationMatrixId.of("OG-Ticker", "s3S"), DifferentiationMatrix.of(DifferentiationMatrixId.of("OG-Ticker", "s3S"), s3S))
-//// 	.put(DifferentiationMatrixId.of("OG-Ticker", "s4S"), DifferentiationMatrix.of(DifferentiationMatrixId.of("OG-Ticker", "s4S"), s4S))
-//// 	.put(DifferentiationMatrixId.of("OG-Ticker", "p3S"), DifferentiationMatrix.of(DifferentiationMatrixId.of("OG-Ticker", "p3S"), p3S))//sec der s2
-//// 	.put(DifferentiationMatrixId.of("OG-Ticker", "p4S"), DifferentiationMatrix.of(DifferentiationMatrixId.of("OG-Ticker", "p4S"), p4S))//first der s2
-//// 	.put(DifferentiationMatrixId.of("OG-Ticker", "q3S"), DifferentiationMatrix.of(DifferentiationMatrixId.of("OG-Ticker", "q3S"), q3S))//sec der s4
-//// 	.put(DifferentiationMatrixId.of("OG-Ticker", "q4S"), DifferentiationMatrix.of(DifferentiationMatrixId.of("OG-Ticker", "q4S"), q4S))//first der s4
-//// 	.put(DifferentiationMatrixId.of("OG-Ticker", "s3DerivFirstS"), DifferentiationMatrix.of(DifferentiationMatrixId.of("OG-Ticker", "s3DerivFirstS"), s3DerivFirstS))
-//// 	//.put(DifferentiationMatrixId.of("OG-Ticker", "s4DerivFirstS"), DifferentiationMatrix.of(DifferentiationMatrixId.of("OG-Ticker", "s4DerivFirstS"), s4DerivFirstS))
-//// 	.put(DifferentiationMatrixId.of("OG-Ticker", "dS"), DifferentiationMatrix.of(DifferentiationMatrixId.of("OG-Ticker", "dS"), dS))
-//// 	.build();
-//	REF_DATA= REF_DATA.combinedWith((ImmutableReferenceData) ImmutableReferenceData.of(builderRefData1.build()));
-//}
 
-//static{
-//	double a0=0.001258720889208218;
-//	double b0=0.00013;
-//	double s0=0.00349;
-//	Object[] g1 = IntStream.range(-2, 3).mapToDouble(i -> i*0.01).boxed().toArray();
-// 	Object[] g2 = IntStream.range(-2, 3).mapToDouble(i -> i*.1+1).boxed().toArray();
-// 	Object[] g3 = IntStream.range(-2, 3).mapToDouble(i -> i*.1+1).boxed().toArray();
-// 	List<List<Object>> s = Lists.cartesianProduct(Arrays.asList(g1),Arrays.asList(g2),Arrays.asList(g3));
-// 	List<Object> l= new ArrayList<Object>();l.add(0.0);
-// 	l.add(1.0);
-// 	l.add(1.0);
-// 	s.indexOf(l);
-// 	//s vectors
-// 	DoubleArray s2 = DoubleArray.copyOf(Taylor.toArray(0,s));
-// 	DoubleArray s3 = DoubleArray.copyOf(Taylor.toArray(1,s));
-// 	DoubleArray s4 = DoubleArray.copyOf(Taylor.toArray(2,s));
-// 	int size = g1.length*g2.length*g3.length;
-// 	//test
-// 	//SimpleMatrix sm1 = new SimpleMatrix(5, 5,false, s3.toArray());
-// 	//end
-// 	SimpleMatrix s2S = new SimpleMatrix(size, 1,true, s2.toArray()); 
-// 	SimpleMatrix s3S = new SimpleMatrix(size, 1,true, s3.toArray());
-// 	SimpleMatrix s4S = new SimpleMatrix(size, 1,true, s4.toArray());
-// 	// Differentiation matrices
-// 	SimpleMatrix ds2S = SimpleMatrix.identity(g1.length);
-// 	SimpleMatrix ds3S= SimpleMatrix.identity(g2.length);
-// 	SimpleMatrix ds4S= SimpleMatrix.identity(g3.length);
-// 	SimpleMatrix s2DerivFirstS = Taylor.UDFtoMatrixS(g1.length,1,2,0.01).kron(ds3S).kron(ds4S);
-// 	SimpleMatrix s2DerivSecS =  Taylor.UDFtoMatrixS(g1.length,2,3,0.01).kron(ds3S).kron(ds4S);
-// 	SimpleMatrix s3DerivFirstS = ds2S.kron(Taylor.UDFtoMatrixS(g2.length,1,2,.1).kron(ds4S));
-// 	//SimpleMatrix s3DerivFirstSDet = Taylor.UDFtoMatrixS(g2.length,1,2,1);
-// 	SimpleMatrix s4DerivFirstS = ds2S.kron(ds3S).kron(Taylor.UDFtoMatrixS(g3.length,1,2,1));
-// 	
-// 	SimpleMatrix dS= SimpleMatrix.identity(size);
-// 	//SimpleMatrix dSDet= SimpleMatrix.identity(g2.length);
-// 	SimpleMatrix p3S = s2DerivSecS.scale(.5*s0*s0);
-// 	SimpleMatrix t2S = SimpleMatrix.diag(s2.multipliedBy(b0).plus(a0).toArray());
-// 	s2DerivFirstS.convertToSparse();
-// 	t2S.convertToSparse();
-// 	SimpleMatrix p4S = s2DerivFirstS.mult(t2S);
-// 	p3S.convertToSparse();
-// 	p4S.convertToSparse();
-// 	dS.convertToSparse();
-// 	builderRefData1
-// 	.put(DifferentiationMatrixId.of("OG-Ticker", "s2S"), DifferentiationMatrix.of(DifferentiationMatrixId.of("OG-Ticker", "s2S"), s2S))
-// 	.put(DifferentiationMatrixId.of("OG-Ticker", "s3S"), DifferentiationMatrix.of(DifferentiationMatrixId.of("OG-Ticker", "s3S"), s3S))
-// 	.put(DifferentiationMatrixId.of("OG-Ticker", "s4S"), DifferentiationMatrix.of(DifferentiationMatrixId.of("OG-Ticker", "s4S"), s4S))
-// 	.put(DifferentiationMatrixId.of("OG-Ticker", "p3S"), DifferentiationMatrix.of(DifferentiationMatrixId.of("OG-Ticker", "p3S"), p3S))
-// 	.put(DifferentiationMatrixId.of("OG-Ticker", "p4S"), DifferentiationMatrix.of(DifferentiationMatrixId.of("OG-Ticker", "p4S"), p4S))
-// 	.put(DifferentiationMatrixId.of("OG-Ticker", "s3DerivFirstS"), DifferentiationMatrix.of(DifferentiationMatrixId.of("OG-Ticker", "s3DerivFirstS"), s3DerivFirstS))
-// 	.put(DifferentiationMatrixId.of("OG-Ticker", "s4DerivFirstS"), DifferentiationMatrix.of(DifferentiationMatrixId.of("OG-Ticker", "s4DerivFirstS"), s4DerivFirstS))
-// 	.put(DifferentiationMatrixId.of("OG-Ticker", "dS"), DifferentiationMatrix.of(DifferentiationMatrixId.of("OG-Ticker", "dS"), dS))
-// 	.build();
-//	REF_DATA= REF_DATA.combinedWith((ImmutableReferenceData) ImmutableReferenceData.of(builderRefData1.build()));
-//}
 
 public static <K, V> Map<K, V> zipToMap(List<K> keys, List<V> values) {
     return IntStream.range(0, keys.size()).boxed()
@@ -895,47 +650,47 @@ private static final class ExactIdFilter<T, I extends MarketDataId<T>> implement
   extends MarketDataName<Double>
   implements Serializable {
 
-/** Serialization version. */
-private static final long serialVersionUID = 1L;
-
-/**
- * The name.
- */
-private final String name;
-
-//-------------------------------------------------------------------------
-/**
- * Obtains an instance from the specified name.
- * <p>
- * Curve names may contain any character, but must not be empty.
- *
- * @param name  the name of the curve
- * @return a curve with the specified name
- */
-@FromString
-public static ParamaterName of(String name) {
-  return new ParamaterName(name);
-}
-
-/**
- * Creates an instance.
- * 
- * @param name  the name of the curve
- */
-private ParamaterName(String name) {
-  this.name = ArgChecker.notEmpty(name, "name");
-}
-
-//-------------------------------------------------------------------------
-@Override
-public Class<Double> getMarketDataType() {
-  return Double.class;
-}
-
-@Override
-public String getName() {
-  return name;
-}
+	/** Serialization version. */
+	private static final long serialVersionUID = 1L;
+	
+	/**
+	 * The name.
+	 */
+	private final String name;
+	
+	//-------------------------------------------------------------------------
+	/**
+	 * Obtains an instance from the specified name.
+	 * <p>
+	 * Curve names may contain any character, but must not be empty.
+	 *
+	 * @param name  the name of the curve
+	 * @return a curve with the specified name
+	 */
+	@FromString
+	public static ParamaterName of(String name) {
+	  return new ParamaterName(name);
+	}
+	
+	/**
+	 * Creates an instance.
+	 * 
+	 * @param name  the name of the curve
+	 */
+	private ParamaterName(String name) {
+	  this.name = ArgChecker.notEmpty(name, "name");
+	}
+	
+	//-------------------------------------------------------------------------
+	@Override
+	public Class<Double> getMarketDataType() {
+	  return Double.class;
+	}
+	
+	@Override
+	public String getName() {
+	  return name;
+	}
 
 }
   }
