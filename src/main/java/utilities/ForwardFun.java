@@ -2,7 +2,7 @@ package utilities;
 
 import com.opengamma.strata.collect.ArgChecker;
 
-import pricer.DiscountingPolicyTradePricer;
+
 
 public class ForwardFun {
 	private static double di;

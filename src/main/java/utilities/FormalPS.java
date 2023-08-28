@@ -152,11 +152,11 @@ public class FormalPS {
         FormalPS cos = new FormalPS();
         
         List<FormalPS> array = new ArrayList() ;
-        array.add(new RationalPolynomial(new BigRational(1, 1),0));
-        array.add(l2);
-        array.add(l2.times(l2));
-        array.add(l2.times(l2).times(l2));
-        
+//        array.add(new RationalPolynomial(new BigRational(1, 1),0));
+//        array.add(l2);
+//        array.add(l2.times(l2));
+//        array.add(l2.times(l2).times(l2));
+//        
         
         FormalPS sin = cos.intg();
         cos.copyFrom(new FormalPS(new double[]{1}).sub(sin.intg()));

@@ -1,9 +1,5 @@
 package utilities;
 
-import com.opengamma.strata.collect.ArgChecker;
-
-import pricer.DiscountingPolicyTradePricer;
-
 public class HWAnalytical {
 	private static double a;
 	private static double b;

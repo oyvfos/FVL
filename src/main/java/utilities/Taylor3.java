@@ -138,11 +138,11 @@ public class Taylor3 {
 		return SimpleMatrix.wrap(d).scale(1/Math.pow(h,m));
     }
     public static void main(String[] args) {
-     test();
+     //test();
      
     }
     public static void testM() {
-        test();
+        //test();
         DMatrixSparseCSC a = new DMatrixSparseCSC(1000,1000,0);
   	  DMatrixSparseCSC b = new DMatrixSparseCSC(1000,1000,0);
   	DMatrixSparseCSC c = new DMatrixSparseCSC(1000,1000,0);
@@ -150,96 +150,96 @@ public class Taylor3 {
   	  CommonOps_DSCC.mult(a,b,c);
        }
     
-    public static void test() { 
-    	long start = System.currentTimeMillis();
-    	double qx=0.0029265 ;
-    	double Lapse=0.002;
-    	double cost =16;
-    	double a0=0.001258720889208218;
-    	double b0=0.00013;
-    	double s0=0.00349;
-    	double GK=171;
-    	int steps=10;
-    	double fondsw= 144;
-    	//MatrixAlgebra ALGEBRA = new CommonsMatrixAlgebra();
-        // range grid
-    	
-    	Object[] g1 = IntStream.range(-2, 2).mapToDouble(i -> i*0.01).boxed().toArray();
-     	Object[] g2 = IntStream.range(-2, 3).mapToDouble(i -> i*.1+1).boxed().toArray();
-     	Object[] g3 = IntStream.range(-2, 3).mapToDouble(i -> i*.1+1).boxed().toArray();
-     	List<List<Object>> s = Lists.cartesianProduct(Arrays.asList(g1),Arrays.asList(g2),Arrays.asList(g3));
-     	List<Object> l= new ArrayList<Object>();l.add(0.0);
-     	l.add(1.0);
-     	l.add(1.0);
-     	s.indexOf(l);
-     	//s vectors
-     	DoubleArray s2_ = DoubleArray.copyOf(Taylor.toArray(0,s));
-     	DoubleArray s3_ = DoubleArray.copyOf(Taylor.toArray(1,s));
-     	DoubleArray s4_ = DoubleArray.copyOf(Taylor.toArray(2,s));
-     	int size = g1.length*g2.length*g3.length;
-     	SimpleMatrix s2S = new SimpleMatrix(size, 1,true, s2_.toArray()); 
-     	SimpleMatrix s3S = new SimpleMatrix(size, 1,true, s3_.toArray()).scale(fondsw/2);
-     	SimpleMatrix s4S = new SimpleMatrix(size, 1,true, s4_.toArray()).scale(fondsw/2);;
-    	DoubleArray s4 = Taylor.toArray(s4S) ;
-     	DoubleArray s3 = Taylor.toArray(s3S) ;
-		DoubleArray s2 = Taylor.toArray(s2S) ;
-     	// Differentiation matrices
-     	SimpleMatrix ds2S = SimpleMatrix.identity(g1.length);
-     	SimpleMatrix ds3S= SimpleMatrix.identity(g2.length);
-     	SimpleMatrix ds4S= SimpleMatrix.identity(g3.length);
-     	SimpleMatrix s2DerivFirstS = Taylor.UDFtoMatrixS(g1.length,1,2,0.01).kron(ds3S).kron(ds4S);
-     	SimpleMatrix s2DerivSecS =  Taylor.UDFtoMatrixS(g1.length,2,3,0.01).kron(ds3S).kron(ds4S);
-     	SimpleMatrix s3DerivFirstS = ds2S.kron(Taylor.UDFtoMatrixS(g2.length,1,2,1).kron(ds4S));
-     	SimpleMatrix s4DerivFirstS = ds2S.kron(ds3S).kron(Taylor.UDFtoMatrixS(g3.length,1,2,1));
-     	
-     	double scaleVal = 1/(.1*fondsw);
-	 	s3DerivFirstS= s3DerivFirstS.scale(scaleVal);
-	 	s4DerivFirstS= s4DerivFirstS.scale(scaleVal);
-	 	
-     	SimpleMatrix dS= SimpleMatrix.identity(size);
-     	SimpleMatrix p3S = s2DerivSecS.scale(.5*s0*s0);
-     	SimpleMatrix t2S = SimpleMatrix.diag(s2.multipliedBy(b0).plus(a0).toArray());
-     	s2DerivFirstS.convertToSparse();
-     	t2S.convertToSparse();
-     	SimpleMatrix p4S = s2DerivFirstS.mult(t2S);
-     	p3S.convertToSparse();
-     	p4S.convertToSparse();
-     	dS.convertToSparse();
-     	s3DerivFirstS.convertToSparse();
-    	long start1 = System.currentTimeMillis();
-    	SimpleMatrix yS = new SimpleMatrix(s3.size(),1,true,DoubleArray.copyOf(s3.stream().map(i-> GK + Math.max(0,i-GK)).toArray()).plus(s4.multipliedBy(1)).toArray());
-    	double dt = 1;
-    	for (double i = 1; i < steps+1; i=i+dt) {
-    		
-	  		SimpleMatrix p1S = SimpleMatrix.diag(s2.plus(.9*qx+Lapse).toArray());
-		 	p1S.convertToSparse();
-		 	SimpleMatrix t2S1 = SimpleMatrix.diag(s3.multipliedBy(s2.plus(-0.015)).toArray());
-		 	t2S1.convertToSparse();
-		 	
-		 	SimpleMatrix p2S=t2S1.mult(s3DerivFirstS);
-		 	p2S.convertToSparse();
-		 	SimpleMatrix t5S = SimpleMatrix.diag(s4.multipliedBy(s2.plus(-0.015)).toArray());
-		 	s4DerivFirstS.convertToSparse();
-		 	t5S.convertToSparse();
-		 	SimpleMatrix p5S=t5S.mult(s3DerivFirstS);
-		 	p5S.convertToSparse();
-	 		SimpleMatrix y1 = p1S.minus(p2S).minus(p5S).minus(p3S).minus(p4S).minus(dS.scale(1/dt)).mult(yS).plus(s3S.plus(s4S).scale((-Lapse)*.9).minus(cost*Math.pow(1.01, steps-i))).scale(dt);
-	 		//SimpleMatrix y1Adj = p1S.minus(p2S).minus(p5S).minus(p3S).minus(p4S).transpose().minus(dS).mult(ySAdj);
-	 		yS=y1.scale(-1);
-	 		//ySAdj=y1Adj.scale(-1);
-    		//SimpleMatrix y1 = p1S.minus(p2S).minus(p3S).minus(p4S).minus(dS).mult(yS).plus(s3S.scale(-Lapse).minus(cost*Math.pow(1.01, steps-i)));
-    		//yS=y1.scale(-1);
-    	
-    	}
+//    public static void test() { 
+//    	long start = System.currentTimeMillis();
+//    	double qx=0.0029265 ;
+//    	double Lapse=0.002;
+//    	double cost =16;
+//    	double a0=0.001258720889208218;
+//    	double b0=0.00013;
+//    	double s0=0.00349;
+//    	double GK=171;
+//    	int steps=10;
+//    	double fondsw= 144;
+//    	//MatrixAlgebra ALGEBRA = new CommonsMatrixAlgebra();
+//        // range grid
+//    	
+//    	Object[] g1 = IntStream.range(-2, 2).mapToDouble(i -> i*0.01).boxed().toArray();
+//     	Object[] g2 = IntStream.range(-2, 3).mapToDouble(i -> i*.1+1).boxed().toArray();
+//     	Object[] g3 = IntStream.range(-2, 3).mapToDouble(i -> i*.1+1).boxed().toArray();
+//     	List<List<Object>> s = Lists.cartesianProduct(Arrays.asList(g1),Arrays.asList(g2),Arrays.asList(g3));
+//     	List<Object> l= new ArrayList<Object>();l.add(0.0);
+//     	l.add(1.0);
+//     	l.add(1.0);
+//     	s.indexOf(l);
+//     	//s vectors
+//     	DoubleArray s2_ = DoubleArray.copyOf(Taylor.toArray(0,s));
+//     	DoubleArray s3_ = DoubleArray.copyOf(Taylor.toArray(1,s));
+//     	DoubleArray s4_ = DoubleArray.copyOf(Taylor.toArray(2,s));
+//     	int size = g1.length*g2.length*g3.length;
+//     	SimpleMatrix s2S = new SimpleMatrix(size, 1,true, s2_.toArray()); 
+//     	SimpleMatrix s3S = new SimpleMatrix(size, 1,true, s3_.toArray()).scale(fondsw/2);
+//     	SimpleMatrix s4S = new SimpleMatrix(size, 1,true, s4_.toArray()).scale(fondsw/2);;
+//    	DoubleArray s4 = Taylor.toArray(s4S) ;
+//     	DoubleArray s3 = Taylor.toArray(s3S) ;
+//		DoubleArray s2 = Taylor.toArray(s2S) ;
+//     	// Differentiation matrices
+//     	SimpleMatrix ds2S = SimpleMatrix.identity(g1.length);
+//     	SimpleMatrix ds3S= SimpleMatrix.identity(g2.length);
+//     	SimpleMatrix ds4S= SimpleMatrix.identity(g3.length);
+//     	SimpleMatrix s2DerivFirstS = Taylor.UDFtoMatrixS(g1.length,1,2,0.01).kron(ds3S).kron(ds4S);
+//     	SimpleMatrix s2DerivSecS =  Taylor.UDFtoMatrixS(g1.length,2,3,0.01).kron(ds3S).kron(ds4S);
+//     	SimpleMatrix s3DerivFirstS = ds2S.kron(Taylor.UDFtoMatrixS(g2.length,1,2,1).kron(ds4S));
+//     	SimpleMatrix s4DerivFirstS = ds2S.kron(ds3S).kron(Taylor.UDFtoMatrixS(g3.length,1,2,1));
+//     	
+//     	double scaleVal = 1/(.1*fondsw);
+//	 	s3DerivFirstS= s3DerivFirstS.scale(scaleVal);
+//	 	s4DerivFirstS= s4DerivFirstS.scale(scaleVal);
+//	 	
+//     	SimpleMatrix dS= SimpleMatrix.identity(size);
+//     	SimpleMatrix p3S = s2DerivSecS.scale(.5*s0*s0);
+//     	SimpleMatrix t2S = SimpleMatrix.diag(s2.multipliedBy(b0).plus(a0).toArray());
+//     	s2DerivFirstS.convertToSparse();
+//     	t2S.convertToSparse();
+//     	SimpleMatrix p4S = s2DerivFirstS.mult(t2S);
+//     	p3S.convertToSparse();
+//     	p4S.convertToSparse();
+//     	dS.convertToSparse();
+//     	s3DerivFirstS.convertToSparse();
+//    	long start1 = System.currentTimeMillis();
+//    	SimpleMatrix yS = new SimpleMatrix(s3.size(),1,true,DoubleArray.copyOf(s3.stream().map(i-> GK + Math.max(0,i-GK)).toArray()).plus(s4.multipliedBy(1)).toArray());
+//    	double dt = 1;
+//    	for (double i = 1; i < steps+1; i=i+dt) {
+//    		
+//	  		SimpleMatrix p1S = SimpleMatrix.diag(s2.plus(.9*qx+Lapse).toArray());
+//		 	p1S.convertToSparse();
+//		 	SimpleMatrix t2S1 = SimpleMatrix.diag(s3.multipliedBy(s2.plus(-0.015)).toArray());
+//		 	t2S1.convertToSparse();
+//		 	
+//		 	SimpleMatrix p2S=t2S1.mult(s3DerivFirstS);
+//		 	p2S.convertToSparse();
+//		 	SimpleMatrix t5S = SimpleMatrix.diag(s4.multipliedBy(s2.plus(-0.015)).toArray());
+//		 	s4DerivFirstS.convertToSparse();
+//		 	t5S.convertToSparse();
+//		 	SimpleMatrix p5S=t5S.mult(s3DerivFirstS);
+//		 	p5S.convertToSparse();
+//	 		SimpleMatrix y1 = p1S.minus(p2S).minus(p5S).minus(p3S).minus(p4S).minus(dS.scale(1/dt)).mult(yS).plus(s3S.plus(s4S).scale((-Lapse)*.9).minus(cost*Math.pow(1.01, steps-i))).scale(dt);
+//	 		//SimpleMatrix y1Adj = p1S.minus(p2S).minus(p5S).minus(p3S).minus(p4S).transpose().minus(dS).mult(ySAdj);
+//	 		yS=y1.scale(-1);
+//	 		//ySAdj=y1Adj.scale(-1);
+//    		//SimpleMatrix y1 = p1S.minus(p2S).minus(p3S).minus(p4S).minus(dS).mult(yS).plus(s3S.scale(-Lapse).minus(cost*Math.pow(1.01, steps-i)));
+//    		//yS=y1.scale(-1);
+//    	
+//    	}
 //    	for (int i = 1; i < steps+1; i++) {
 //        	
 //    		SimpleMatrix y1 = p1S.minus(p2S).minus(p3S).minus(p4S).minus(dS).transpose().mult(yS).plus(s3S.scale(-Lapse).minus(cost*Math.pow(1.01, steps-i)));
 //    		yS=y1.scale(-1);
 //    	
 //    	}
-    	long end = System.currentTimeMillis();
-    	System.out.println(yS.get(s.indexOf(l)));
-    	System.out.println(end-start1);    	
+//    	long end = System.currentTimeMillis();
+//    	System.out.println(yS.get(s.indexOf(l)));
+//    	System.out.println(end-start1);    	
 //    	For[te=1,te<(steps+1),te++,
 //    			{y1=(First[A[[te]]]-First@d).y +b[[te]]  ;
 //    			y=-y1;AppendTo[temp,y1];}];
@@ -261,6 +261,6 @@ public class Taylor3 {
     
     	        
 
-   }
+//   }
 
 }

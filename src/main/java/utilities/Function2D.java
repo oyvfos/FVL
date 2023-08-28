@@ -3,11 +3,11 @@
  *
  * Please see distribution for license.
  */
-package com.opengamma.analytics.math.function;
+package utilities;
 
 import java.io.Serializable;
 
-import com.opengamma.util.ArgumentChecker;
+import com.opengamma.strata.collect.ArgChecker;
 
 /**
  * 2-D function implementation.
@@ -24,8 +24,8 @@ public abstract class Function2D<S, T> implements Function<S, T>, Serializable {
   @SuppressWarnings("unchecked")
   @Override
   public T evaluate(final S... x) {
-    ArgumentChecker.noNulls(x, "parameter list");
-    ArgumentChecker.isTrue(x.length == 2, "parameter list must be of length 2");
+    ArgChecker.noNulls(x, "parameter list");
+    ArgChecker.isTrue(x.length == 2, "parameter list must be of length 2");
     return evaluate(x[0], x[1]);
   }
 
