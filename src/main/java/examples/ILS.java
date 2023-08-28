@@ -20,15 +20,8 @@ import static com.opengamma.strata.basics.index.OvernightIndices.USD_FED_FUND;
 import static com.opengamma.strata.basics.index.PriceIndices.EU_EXT_CPI;
 import static com.opengamma.strata.basics.index.PriceIndices.US_CPI_U;
 import static com.opengamma.strata.measure.StandardComponents.marketDataFactory;
-import static com.opengamma.strata.product.common.PayReceive.PAY;
-import static com.opengamma.strata.product.common.PayReceive.RECEIVE;
-import static com.opengamma.strata.product.swap.type.FixedInflationSwapConventions.EUR_FIXED_ZC_EU_EXT_CPI;
 import static com.opengamma.strata.product.swap.type.FixedOvernightSwapConventions.USD_FIXED_1Y_FED_FUND_OIS;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.data.Offset.offset;
 
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.text.ParseException;
@@ -52,19 +45,14 @@ import com.google.common.collect.ImmutableMap;
 import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.StandardId;
 import com.opengamma.strata.basics.currency.Currency;
-import com.opengamma.strata.basics.currency.MultiCurrencyAmount;
 import com.opengamma.strata.basics.date.BusinessDayAdjustment;
 import com.opengamma.strata.basics.date.DayCount;
-import com.opengamma.strata.basics.date.DayCounts;
 import com.opengamma.strata.basics.date.DaysAdjustment;
 import com.opengamma.strata.basics.date.Tenor;
 import com.opengamma.strata.basics.index.Index;
 import com.opengamma.strata.basics.index.PriceIndexObservation;
-import com.opengamma.strata.basics.schedule.Frequency;
 import com.opengamma.strata.calc.CalculationRules;
-import com.opengamma.strata.calc.CalculationRunner;
 import com.opengamma.strata.calc.Column;
-import com.opengamma.strata.calc.Results;
 import com.opengamma.strata.calc.marketdata.MarketDataConfig;
 import com.opengamma.strata.calc.marketdata.MarketDataFilter;
 import com.opengamma.strata.calc.marketdata.MarketDataRequirements;
@@ -80,15 +68,11 @@ import com.opengamma.strata.collect.timeseries.LocalDateDoubleTimeSeriesBuilder;
 import com.opengamma.strata.data.ImmutableMarketData;
 import com.opengamma.strata.data.ImmutableMarketDataBuilder;
 import com.opengamma.strata.data.scenario.ScenarioMarketData;
-import com.opengamma.strata.examples.data.export.ExportUtils;
-import com.opengamma.strata.examples.marketdata.ExampleData;
 import com.opengamma.strata.loader.LoaderUtils;
 import com.opengamma.strata.loader.csv.QuotesCsvLoader;
 import com.opengamma.strata.loader.csv.RatesCalibrationCsvLoader;
 import com.opengamma.strata.loader.csv.TradeCsvLoader;
 import com.opengamma.strata.market.ValueType;
-import com.opengamma.strata.market.amount.CashFlows;
-import com.opengamma.strata.market.curve.ConstantNodalCurve;
 import com.opengamma.strata.market.curve.Curve;
 import com.opengamma.strata.market.curve.CurveDefinition;
 import com.opengamma.strata.market.curve.CurveGroupName;
@@ -115,7 +99,6 @@ import com.opengamma.strata.math.impl.statistics.distribution.ProbabilityDistrib
 import com.opengamma.strata.measure.Measures;
 import com.opengamma.strata.measure.StandardComponents;
 import com.opengamma.strata.measure.rate.RatesMarketDataLookup;
-import com.opengamma.strata.measure.swap.SwapTradeCalculationFunction;
 import com.opengamma.strata.pricer.DiscountFactors;
 import com.opengamma.strata.pricer.curve.RatesCurveCalibrator;
 import com.opengamma.strata.pricer.deposit.DiscountingTermDepositProductPricer;
@@ -125,30 +108,16 @@ import com.opengamma.strata.pricer.rate.PriceIndexValues;
 import com.opengamma.strata.pricer.swap.DiscountingSwapProductPricer;
 import com.opengamma.strata.product.ResolvedTrade;
 import com.opengamma.strata.product.Trade;
-import com.opengamma.strata.product.TradeInfo;
-import com.opengamma.strata.product.common.BuySell;
-import com.opengamma.strata.product.common.PayReceive;
 import com.opengamma.strata.product.common.PutCall;
 import com.opengamma.strata.product.deposit.type.ImmutableTermDepositConvention;
 import com.opengamma.strata.product.deposit.type.TermDepositConvention;
 import com.opengamma.strata.product.deposit.type.TermDepositTemplate;
-import com.opengamma.strata.product.rate.InflationMonthlyRateComputation;
-import com.opengamma.strata.product.rate.RateComputation;
-import com.opengamma.strata.product.swap.PriceIndexCalculationMethod;
-import com.opengamma.strata.product.swap.RatePaymentPeriod;
 import com.opengamma.strata.product.swap.ResolvedSwap;
-import com.opengamma.strata.product.swap.ResolvedSwapLeg;
 import com.opengamma.strata.product.swap.ResolvedSwapTrade;
-import com.opengamma.strata.product.swap.Swap;
 import com.opengamma.strata.product.swap.SwapTrade;
 import com.opengamma.strata.product.swap.type.FixedInflationSwapConventions;
 import com.opengamma.strata.product.swap.type.FixedInflationSwapTemplate;
 import com.opengamma.strata.product.swap.type.FixedOvernightSwapTemplate;
-import com.opengamma.strata.product.swap.type.FixedRateSwapLegConvention;
-import com.opengamma.strata.product.swap.type.InflationRateSwapLegConvention;
-import com.opengamma.strata.report.ReportCalculationResults;
-import com.opengamma.strata.report.trade.TradeReport;
-import com.opengamma.strata.report.trade.TradeReportTemplate;
 public class ILS {
 	
 	private static final ReferenceData REF_DATA = ReferenceData.standard();
@@ -313,51 +282,51 @@ public class ILS {
 	    //System.out.println(cf2);
 	    
 	}
-	public static void report() throws IOException, ParseException, ScriptException, URISyntaxException {
-		//trades=ImmutableList.of(trades.get(0),trades2.get(0));
-		ScenarioMarketData scenarioMarketData = marketdataInfl();
-		ImmutableMap<QuoteId, Double> quotes = QuotesCsvLoader.load(VAL_DATE,ResourceLocator.of("classpath:example-calibration/quotes/quotes-infl2021.csv"));
-		   
-		   ImmutableMarketDataBuilder builder = ImmutableMarketData.builder(VAL_DATE);
-			  builder.addValueMap(quotes);
-			  //builder.addTimeSeries(IndexQuoteId.of(EU_EXT_CPI), TS_EUR_CPI);
-			  ImmutableMarketData data = builder.build();
-			  //ImmutableRatesProvider multicurve = provider();   
-			 // InflationNodalCurve ind = (InflationNodalCurve) multicurve.getCurves(GROUP_NAME).get(CurveId.of("EUR-DSCON-CPI", "EUR-CPI"));
-		RatesMarketDataLookup ratesLookup = RatesMarketDataLookup.of(configs2.get(GROUP_NAME));
-		CalculationFunctions functions = CalculationFunctions.of(new SwapTradeCalculationFunction());
-		//CalculationFunctions functions = CalculationFunctions.of(new SwapTradeCalculationFunction1());
-		CalculationRules rules = CalculationRules.of(functions,ratesLookup);
-		CalculationRunner runner = CalculationRunner.ofMultiThreaded();
-	  //Results results = runner.calculateMultiScenario(rules, trades, columns,scenarioMarketData, REF_DATA);
-		
-		ImmutableList<CurveNode> cpiNodes =  configs2.get(GROUP_NAME).findCurveDefinition(CurveName.of("EUR-CPI")).get().getNodes();
-		List<SwapTrade> cpiTradesC = new ArrayList<>();
-		   for (int i = 0; i < cpiNodes.size(); i++) {
-		     cpiTradesC.add((SwapTrade) cpiNodes.get(i).trade(1d, data, REF_DATA));
-		   }
-	   List<SwapTrade> cpiTrades = new ArrayList<>();
-	   for (int i = 0; i < 120; i++) {
-	     //cpiTrades.add(EUR_FIXED_ZC_EU_EXT_CPI.toTrade(trades.get(0).getInfo(),VAL_DATE, VAL_DATE.plusYears(i+1), BuySell.BUY, 1d, 0.02));
-	     cpiTrades.add(SwapTrade.of(TradeInfo.of(VAL_DATE),Swap.of(InflationRateSwapLegConvention.of(EU_EXT_CPI,Period.ofMonths(3) ,PriceIndexCalculationMethod.MONTHLY, BusinessDayAdjustment.NONE).toLeg(VAL_DATE, VAL_DATE.plusYears(i+1), PayReceive.RECEIVE, 1d))));
-	   }
-		 
-	  Results results = runner.calculate(rules, cpiTrades, columns,scenarioMarketData.scenario(0), REF_DATA);
-	 
-	  ReportCalculationResults calculationResults =
-		        ReportCalculationResults.of(VAL_DATE, cpiTrades, columns, results, functions, REF_DATA);
-	  TradeReportTemplate reportTemplate = ExampleData.loadTradeReportTemplate("ils-report-template2_single");
-	  //TradeReportTemplate reportTemplate = ExampleData.loadTradeReportTemplate("ils-report-template2");
-	  //TradeReportTemplate reportTemplate = ExampleData.loadTradeReportTemplate("all-cashflow-report-template3");
-	  TradeReport tradeReport = TradeReport.of(calculationResults, reportTemplate);
-		  try {
-			tradeReport.writeCsv(new FileOutputStream("C:\\Users\\M65H036\\Onedrive - NN\\Expense Inflation\\Rproj\\sensOut.csv"));
-		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		  tradeReport.writeAsciiTable(System.out);
-}
+//	public static void report() throws IOException, ParseException, ScriptException, URISyntaxException {
+//		//trades=ImmutableList.of(trades.get(0),trades2.get(0));
+//		ScenarioMarketData scenarioMarketData = marketdataInfl();
+//		ImmutableMap<QuoteId, Double> quotes = QuotesCsvLoader.load(VAL_DATE,ResourceLocator.of("classpath:example-calibration/quotes/quotes-infl2021.csv"));
+//		   
+//		   ImmutableMarketDataBuilder builder = ImmutableMarketData.builder(VAL_DATE);
+//			  builder.addValueMap(quotes);
+//			  //builder.addTimeSeries(IndexQuoteId.of(EU_EXT_CPI), TS_EUR_CPI);
+//			  ImmutableMarketData data = builder.build();
+//			  //ImmutableRatesProvider multicurve = provider();   
+//			 // InflationNodalCurve ind = (InflationNodalCurve) multicurve.getCurves(GROUP_NAME).get(CurveId.of("EUR-DSCON-CPI", "EUR-CPI"));
+//		RatesMarketDataLookup ratesLookup = RatesMarketDataLookup.of(configs2.get(GROUP_NAME));
+//		CalculationFunctions functions = CalculationFunctions.of(new SwapTradeCalculationFunction());
+//		//CalculationFunctions functions = CalculationFunctions.of(new SwapTradeCalculationFunction1());
+//		CalculationRules rules = CalculationRules.of(functions,ratesLookup);
+//		CalculationRunner runner = CalculationRunner.ofMultiThreaded();
+//	  //Results results = runner.calculateMultiScenario(rules, trades, columns,scenarioMarketData, REF_DATA);
+//		
+//		ImmutableList<CurveNode> cpiNodes =  configs2.get(GROUP_NAME).findCurveDefinition(CurveName.of("EUR-CPI")).get().getNodes();
+//		List<SwapTrade> cpiTradesC = new ArrayList<>();
+//		   for (int i = 0; i < cpiNodes.size(); i++) {
+//		     cpiTradesC.add((SwapTrade) cpiNodes.get(i).trade(1d, data, REF_DATA));
+//		   }
+//	   List<SwapTrade> cpiTrades = new ArrayList<>();
+//	   for (int i = 0; i < 120; i++) {
+//	     //cpiTrades.add(EUR_FIXED_ZC_EU_EXT_CPI.toTrade(trades.get(0).getInfo(),VAL_DATE, VAL_DATE.plusYears(i+1), BuySell.BUY, 1d, 0.02));
+//	     cpiTrades.add(SwapTrade.of(TradeInfo.of(VAL_DATE),Swap.of(InflationRateSwapLegConvention.of(EU_EXT_CPI,Period.ofMonths(3) ,PriceIndexCalculationMethod.MONTHLY, BusinessDayAdjustment.NONE).toLeg(VAL_DATE, VAL_DATE.plusYears(i+1), PayReceive.RECEIVE, 1d))));
+//	   }
+//		 
+//	  Results results = runner.calculate(rules, cpiTrades, columns,scenarioMarketData.scenario(0), REF_DATA);
+//	 
+//	  ReportCalculationResults calculationResults =
+//		        ReportCalculationResults.of(VAL_DATE, cpiTrades, columns, results, functions, REF_DATA);
+//	  TradeReportTemplate reportTemplate = ExampleData.loadTradeReportTemplate("ils-report-template2_single");
+//	  //TradeReportTemplate reportTemplate = ExampleData.loadTradeReportTemplate("ils-report-template2");
+//	  //TradeReportTemplate reportTemplate = ExampleData.loadTradeReportTemplate("all-cashflow-report-template3");
+//	  TradeReport tradeReport = TradeReport.of(calculationResults, reportTemplate);
+//		  try {
+//			tradeReport.writeCsv(new FileOutputStream("C:\\Users\\M65H036\\Onedrive - NN\\Expense Inflation\\Rproj\\sensOut.csv"));
+//		} catch (FileNotFoundException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+//		  tradeReport.writeAsciiTable(System.out);
+//}
 	 public static double logNormalprice(
 		      double forward,
 		      double strike,
@@ -458,7 +427,7 @@ public class ILS {
 	      builder.append(date).append(',').append(v).append("\n");
 	    }
 	  System.out.println(builder.toString());
-	  ExportUtils.export(builder.toString(), "C:\\Users\\M65H036\\Onedrive - NN\\Expense Inflation\\Rproj\\INFrates.csv");
+	  //ExportUtils.export(builder.toString(), "C:\\Users\\M65H036\\Onedrive - NN\\Expense Inflation\\Rproj\\INFrates.csv");
 	  
 	  // disc
 	  StringBuilder builders = new StringBuilder();
@@ -469,7 +438,7 @@ public class ILS {
 	  		double v = multicurve.discountFactor(Currency.EUR, date);
 	      builders.append(date).append(',').append(v).append("\n");
 	    }
-	  ExportUtils.export(builders.toString(), "C:\\Users\\M65H036\\Onedrive - NN\\Expense Inflation\\Rproj\\Drates.csv");
+	  //ExportUtils.export(builders.toString(), "C:\\Users\\M65H036\\Onedrive - NN\\Expense Inflation\\Rproj\\Drates.csv");
 	 // Curve cu = multicurve.getIndexCurves().get(EU_EXT_CPI).;
 	  
 	  // Scenario report
