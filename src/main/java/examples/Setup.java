@@ -140,7 +140,8 @@ public class Setup {
 //		      DiscountingSwapProductPricer.DEFAULT;
 	private static final RatesCurveCalibrator CALIBRATOR = RatesCurveCalibrator.of(1e-9, 1e-9, 100);
 	
-	static List<Trade> totTrades = standard.load(ResourceLocator.of("classpath:trades/totTrades.csv")).getValue();
+	static List<Trade> totTrades = standard.load(ResourceLocator.of("classpath:trades/ALMall.csv")).getValue();
+	//static List<Trade> totTrades = standard.load(ResourceLocator.of("classpath:trades/totTrades.csv")).getValue();
 	static List<Trade> totPOlTrades = standard.load(ResourceLocator.of("classpath:trades/policies_test2_deb.csv")).getValue();
 	
 	
@@ -156,26 +157,7 @@ public class Setup {
 	public final static CurveGroupName GROUP_NAME = CurveGroupName.of("EUR-USD");
 	
 	public static RatesCurveGroupDefinition configA = configs2.get(GROUP_NAME);
-	static RatesCurveGroupDefinition cfg= configA.toBuilder().addCurve(EIOPA.CURVE_DEFN, CHF, CHF_LIBOR_6M).build(); 
-	
-	
-	//market data
-	private static final LocalDateDoubleTimeSeriesBuilder builder0 = LocalDateDoubleTimeSeries.builder();
-	private static final LocalDateDoubleTimeSeriesBuilder builder = LocalDateDoubleTimeSeries.builder();
-	static {
-		builder0.put(LocalDate.of(2020, 4, 30), 104.77d);
-		builder0.put(LocalDate.of(2007, 4, 30), 88.350332d);
-	}
-	private static final LocalDateDoubleTimeSeries TS_EUR_CPI=builder0.build();
-	static  CsvIterator csvFix= CsvIterator.of(ResourceLocator.of("classpath:example-calibration/fixings/fixings.csv").getCharSource(), true);
-	static {
-		
-		 builder.put(LocalDate.of(2020, 8, 27), -0.00477);
-		//builder.put(LocalDate.of(2007, 4, 30), 88.350332d);
-	}
-	//private static final LocalDateDoubleTimeSeries EURIBOR=builder.build();
-	//tsbuilder.put(LocalDate.of(2020, 3, 30), 104.77d);
-	
+	static RatesCurveGroupDefinition cfg= configA.toBuilder().addCurve(EIOPA.CURVE_DEFN, CHF, CHF_LIBOR_6M).build(); // EIOPA in CHF to avoid conflict in discounting in EUR
 	
 	
 	public static void main(String[] args) throws IOException, ParseException, ScriptException, URISyntaxException {
@@ -215,8 +197,6 @@ public class Setup {
 	  final CurveId REPO_CURVE_ID1 = CurveId.of( "GOVT1 BOND1","OG-Ticker");
 	  final RepoGroup GROUP_REPO_V1 = RepoGroup.of("BONDS");
 	  final LegalEntityGroup GROUP_ISSUER_V1 = LegalEntityGroup.of("INSURER");
-  
-	  
 	  //Functions
 	  
 	  //Class<SecuritizedProductTrade<FixedCouponBond>> targetType = null;
@@ -243,7 +223,7 @@ public class Setup {
 			    .put(Pair.of(GROUP_ISSUER_V1, Currency.USD), ISSUER_CURVE_ID1)
 			    .build();     
 	  
-	  LegalEntityDiscountingMarketDataLookup  LegalEntityR = LegalEntityDiscountingMarketDataLookup.of(
+	  LegalEntityDiscountingMarketDataLookup  LegalEntityLookup = LegalEntityDiscountingMarketDataLookup.of(
 	    		repoGroups,repoCurves,issuerGroups, issuerCurves);
 
 	  SwaptionMarketDataLookup swaptionLookup = SwaptionMarketDataLookup.of(IborIndices.EUR_EURIBOR_6M, SwaptionVolatilitiesId.of("SABR"));
@@ -261,7 +241,7 @@ public class Setup {
 		       // Column.of(Measures.PV01_MARKET_QUOTE_BUCKETED)
 		        );
 	
-	//function for calibrating  curves 
+	  //calibrating  curves  
 	  ImmutableMap<QuoteId, Double> quotes = QuotesCsvLoader.load(VAL_DATE,ResourceLocator.of("classpath:example-calibration/quotes/quotes-infl.csv"));
 	  ImmutableMarketDataBuilder builder = ImmutableMarketData.builder(VAL_DATE);
 	  builder.addValueMap(quotes);
@@ -281,8 +261,9 @@ public class Setup {
       builder.addValueMap(quotesA);
   
 	  ImmutableMarketData data = builder.build();
-	  ImmutableRatesProvider multicurve = CALIBRATOR.calibrate(cfg, data, REF_DATA);//.getFirst().combinedWith(provider().getSecond(), FxRateProvider.minimal());
-	
+	  ImmutableRatesProvider multicurve = CALIBRATOR.calibrate(cfg, data, REF_DATA);
+	  
+	  // add all curves to market data/Used for perturbation?
 	  ImmutableMarketDataBuilder builder1 = ImmutableMarketData.builder(VAL_DATE);
 	  	multicurve.getCurves().forEach(
 	            (ccy, curve) -> builder1.addValue(CurveId.of(GROUP_NAME, curve.getName()), curve));
@@ -293,15 +274,6 @@ public class Setup {
 	  //ImmutableRatesProvider provInfl = ILS.provider();
 	  ImmutableMarketDataBuilder builder11 = ImmutableMarketData.builder(VAL_DATE);
 	  
-	  // inflation curve 
-	  //Curve curveInfl = provInfl.findData(CurveName.of("EUR-CPI")).get();
-	  
-	  //builder11.addValue(CurveId.of(GROUP_NAME, CurveName.of("EUR-CPI")), curveInfl);
-	  //builder11.addTimeSeries(IndexQuoteId.of(EU_EXT_CPI), TS_EUR_CPI);
-	  //builder11.addValue(SwaptionVolatilitiesId.of("SABR"), SABR.swaptionVols(multicurve, VAL_DATE));
-	  
-	  
-	  //ESG based on EIOPA, basis for Monte carlo- used for benchmark FVL
 	  Builder<LabelDateParameterMetadata> nodeMetadata = ImmutableList.<LabelDateParameterMetadata>builder();
 	  Curve discountCurve = multicurve.findData(CurveName.of("EIOPA")).get();
 	  
@@ -382,14 +354,14 @@ public class Setup {
 	);
 //		 
 	ScenarioDefinition scenarioDefinition = ScenarioDefinition.empty();
-	  RatesMarketDataLookup ratesLookup = RatesMarketDataLookup.of(cfg);
+	RatesMarketDataLookup ratesLookup = RatesMarketDataLookup.of(cfg);
 	  //store policy convention related information  
 	  ReferenceData b = ((ImmutablePolicyConvention) StandardPolicyConventions.UNIT_LINKED).addRefdata(REF_DATA);
 	  REF_DATA= REF_DATA.combinedWith(b); 
-
+	
 	  //configL=configL.toBuilder().addForwardCurve(ILS.lookup(), (Index) EU_EXT_CPI).build();
 	  
-	  CalculationRules rules = CalculationRules.of(functions, ratesLookup, LegalEntityR,swaptionLookup);
+	  CalculationRules rules = CalculationRules.of(functions, ratesLookup, LegalEntityLookup,swaptionLookup);
 	  	MarketDataRequirements reqs = MarketDataRequirements.of(rules, totTrades, columns, REF_DATA);
 	  	reqs= MarketDataRequirements.combine(Arrays.asList(reqs,MarketDataRequirements.builder().addValues(bp).addValues(id1).build()));
 	  	 ScenarioMarketData scenarioMarketData =marketDataFactory().createMultiScenario(reqs, MarketDataConfig.empty(), MARKET_DATA1, REF_DATA, scenarioDefinition);
