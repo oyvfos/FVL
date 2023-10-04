@@ -47,8 +47,10 @@ import com.opengamma.strata.basics.date.DayCount;
 import com.opengamma.strata.basics.date.DayCounts;
 import com.opengamma.strata.basics.date.DaysAdjustment;
 import com.opengamma.strata.basics.date.HolidayCalendarIds;
+import com.opengamma.strata.basics.index.FxIndices;
 import com.opengamma.strata.basics.index.IborIndex;
 import com.opengamma.strata.basics.index.IborIndices;
+import com.opengamma.strata.basics.index.Index;
 import com.opengamma.strata.basics.schedule.Frequency;
 import com.opengamma.strata.basics.schedule.PeriodicSchedule;
 import com.opengamma.strata.basics.schedule.StubConvention;
@@ -354,7 +356,14 @@ public class Setup {
 	);
 //		 
 	ScenarioDefinition scenarioDefinition = ScenarioDefinition.empty();
-	RatesMarketDataLookup ratesLookup = RatesMarketDataLookup.of(cfg);
+	//Lookup w/o curve settings
+	 
+	  cfg=cfg.toBuilder()
+	  .addForwardCurve(CurveName.of("Equity"), FxIndices.EUR_USD_ECB)
+	  .addForwardCurve(CurveName.of("EUR-CPI"), (Index)EU_EXT_CPI)
+	  //.addForwardCurve(CurveName.of("Equity"), FxIndices.EUR_USD_ECB)
+	  .build();
+	 RatesMarketDataLookup ratesLookup = RatesMarketDataLookup.of(cfg);
 	  //store policy convention related information  
 	  ReferenceData b = ((ImmutablePolicyConvention) StandardPolicyConventions.UNIT_LINKED).addRefdata(REF_DATA);
 	  REF_DATA= REF_DATA.combinedWith(b); 
@@ -362,12 +371,12 @@ public class Setup {
 	  //configL=configL.toBuilder().addForwardCurve(ILS.lookup(), (Index) EU_EXT_CPI).build();
 	  
 	  CalculationRules rules = CalculationRules.of(functions, ratesLookup, LegalEntityLookup,swaptionLookup);
-	  	MarketDataRequirements reqs = MarketDataRequirements.of(rules, totTrades, columns, REF_DATA);
+	  	MarketDataRequirements reqs = MarketDataRequirements.of(rules, totPOlTrades, columns, REF_DATA);
 	  	reqs= MarketDataRequirements.combine(Arrays.asList(reqs,MarketDataRequirements.builder().addValues(bp).addValues(id1).build()));
 	  	 ScenarioMarketData scenarioMarketData =marketDataFactory().createMultiScenario(reqs, MarketDataConfig.empty(), MARKET_DATA1, REF_DATA, scenarioDefinition);
-	  Results results = runner.calculateMultiScenario(rules, totTrades, columns,scenarioMarketData, REF_DATA);
+	  Results results = runner.calculateMultiScenario(rules, totPOlTrades, columns,scenarioMarketData, REF_DATA);
 	  ReportCalculationResults calculationResults =
-		        ReportCalculationResults.of(VAL_DATE, totTrades, columns, results, functions, REF_DATA);
+		        ReportCalculationResults.of(VAL_DATE, totPOlTrades, columns, results, functions, REF_DATA);
 	  
 	  //Report
 	  TradeReportTemplate reportTemplate = ExampleData.loadTradeReportTemplate("ils-report-template2"); 

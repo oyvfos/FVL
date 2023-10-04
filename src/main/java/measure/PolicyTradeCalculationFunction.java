@@ -145,7 +145,7 @@ public class PolicyTradeCalculationFunction
     Policy product = trade.getProduct();
     Set<Index> indices = new HashSet<>();
     indices.add((Index) EU_EXT_CPI);
-    indices.add(IborIndices.EUR_LIBOR_3M);
+    //indices.add(IborIndices.EUR_LIBOR_3M);
     indices.add(FxIndices.EUR_USD_ECB);//placeholder equity index
     //product.getIndexInterpolated().ifPresent(indices::add);
     ImmutableSet<Currency> currencies = ImmutableSet.of(Currency.EUR);
