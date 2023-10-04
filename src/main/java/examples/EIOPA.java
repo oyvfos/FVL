@@ -1,9 +1,12 @@
 package examples;
 
 import static com.opengamma.strata.basics.currency.Currency.EUR;
+import static com.opengamma.strata.basics.currency.Currency.CHF;
 import static com.opengamma.strata.basics.date.DayCounts.ACT_365F;
 import static com.opengamma.strata.basics.index.IborIndices.EUR_EURIBOR_6M;
+import static com.opengamma.strata.basics.index.IborIndices.CHF_LIBOR_6M;
 import static com.opengamma.strata.product.swap.type.FixedIborSwapConventions.EUR_FIXED_1Y_EURIBOR_6M;
+import static com.opengamma.strata.product.swap.type.FixedIborSwapConventions.CHF_FIXED_1Y_LIBOR_6M;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -16,12 +19,17 @@ import java.util.function.BiFunction;
 import javax.script.ScriptException;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableList.Builder;
 import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.StandardId;
 import com.opengamma.strata.basics.date.DayCount;
 import com.opengamma.strata.basics.date.Tenor;
 import com.opengamma.strata.collect.array.DoubleArray;
+import com.opengamma.strata.collect.io.ResourceLocator;
+import com.opengamma.strata.data.ImmutableMarketData;
+import com.opengamma.strata.data.ImmutableMarketDataBuilder;
+import com.opengamma.strata.loader.csv.QuotesCsvLoader;
 import com.opengamma.strata.market.ValueType;
 import com.opengamma.strata.market.curve.CurveGroupName;
 import com.opengamma.strata.market.curve.CurveName;
@@ -33,6 +41,7 @@ import com.opengamma.strata.market.observable.QuoteId;
 import com.opengamma.strata.market.param.ParameterMetadata;
 import com.opengamma.strata.market.param.TenorParameterMetadata;
 import com.opengamma.strata.math.impl.interpolation.SmithWilsonCurveFunction;
+import com.opengamma.strata.pricer.curve.RatesCurveCalibrator;
 import com.opengamma.strata.product.swap.type.FixedIborSwapTemplate;
 
 
@@ -89,7 +98,7 @@ public class EIOPA {
 			  "EUSA12 CURNCY",
 			  "EUSA15 CURNCY",
 			  "EUSA20 CURNCY"};
-	  /** Nodes for the Fwd 3M GBP curve  - goes in the definition */
+	  /** Nodes for the Fwd 3M EUR curve  - goes in the definition */
 	  private static final int FWD6_NB_NODES = FWD6_ID_VALUE.length;
 	  public static final CurveNode[] ALL_NODES = new CurveNode[FWD6_NB_NODES];
 	   
@@ -101,7 +110,7 @@ public class EIOPA {
 	  static {
 	    for (int i = 0; i < FWD6_NB_NODES; i++) {
 	      ALL_NODES[i] = FixedIborSwapCurveNode.of(
-	          FixedIborSwapTemplate.of(Period.ZERO, Tenor.of(FWD6_IRS_TENORS[i]), EUR_FIXED_1Y_EURIBOR_6M),
+	          FixedIborSwapTemplate.of(Period.ZERO, Tenor.of(FWD6_IRS_TENORS[i]), CHF_FIXED_1Y_LIBOR_6M),
 	          QuoteId.of(StandardId.of(SCHEME, FWD6_ID_VALUE[i])));
 	      NODE_TIMES[i] = CURVE_DC.relativeYearFraction(VALUATION_DATE, ALL_NODES[i].date(VALUATION_DATE, REF_DATA));
 	    }
@@ -142,8 +151,8 @@ public class EIOPA {
 		  }
 	  
 	 
-	  
-	 private static final ParameterizedFunctionalCurveDefinition CURVE_DEFN = ParameterizedFunctionalCurveDefinition.builder()
+	  private static LocalDate VAL_DATE = LocalDate.of(2020, 6, 30);
+	 static final ParameterizedFunctionalCurveDefinition CURVE_DEFN = ParameterizedFunctionalCurveDefinition.builder()
 				      .name(CURVE_NAME)
 				      .xValueType(ValueType.YEAR_FRACTION)
 				      .yValueType(ValueType.DISCOUNT_FACTOR)
@@ -157,23 +166,26 @@ public class EIOPA {
 				      .build();
 	///  //
 	 
-	  
-	  
-	 
-
-	
 		 
 	
 		  // Repo and issuer curves - ignoring right now, but have to match trades 
 		
-		 
+	 private static final RatesCurveCalibrator CALIBRATOR = RatesCurveCalibrator.of(1e-3, 1e-9, 100);
 		 private static final double ONE_BP = 1.0e-4;
 		 public static final RatesCurveGroupDefinition CURVE_GROUP_DEFN = RatesCurveGroupDefinition.builder()
 			      .name(CURVE_GROUP_NAME)
-			      .addCurve(CURVE_DEFN, EUR, EUR_EURIBOR_6M)
+			      .addCurve(CURVE_DEFN, CHF, CHF_LIBOR_6M)
 			      .build();
 		 public static  void eiopa(LocalDate VALUATION_DATE) throws IOException, ParseException {
-//			 double[] rates =new double[121];
+//			 
+			 ImmutableMarketDataBuilder builder = ImmutableMarketData.builder(VAL_DATE);
+				ImmutableMap<QuoteId, Double> quotes = QuotesCsvLoader.load(VAL_DATE,ResourceLocator.of("classpath:example-calibration/quotes/quotesALL.csv"));
+				builder.addValueMap(quotes);
+		  
+			  ImmutableMarketData data = builder.build();
+			  CALIBRATOR.calibrate(CURVE_GROUP_DEFN, data, REF_DATA);
+			  //return CALIBRATOR.calibrate(cfg, data, REF_DATA); 
+			  //double[] rates =new double[121];
 //			 System.out.println(CURVE_DEFN.getParameterCount());
 //			 //ImmutableRatesProvider result2 = CALIBRATOR.calibrate(CURVE_GROUP_DEFN, data0(VALUATION_DATE), REF_DATA);
 //			 DiscountFactors dsc = result2.discountFactors(EUR);

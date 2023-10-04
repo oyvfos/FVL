@@ -1,7 +1,9 @@
 package examples;
 
 
+import static com.opengamma.strata.basics.currency.Currency.CHF;
 import static com.opengamma.strata.basics.currency.Currency.EUR;
+import static com.opengamma.strata.basics.index.IborIndices.CHF_LIBOR_6M;
 import static com.opengamma.strata.basics.index.PriceIndices.EU_EXT_CPI;
 import static com.opengamma.strata.loader.csv.CsvLoaderColumns.CURRENCY_FIELD;
 import static com.opengamma.strata.loader.csv.CsvLoaderColumns.END_DATE_FIELD;
@@ -9,6 +11,7 @@ import static com.opengamma.strata.loader.csv.CsvLoaderColumns.FIXED_RATE_FIELD;
 import static com.opengamma.strata.loader.csv.CsvLoaderColumns.NOTIONAL_FIELD;
 import static com.opengamma.strata.loader.csv.CsvLoaderColumns.SECURITY_ID_FIELD;
 import static com.opengamma.strata.loader.csv.CsvLoaderColumns.SECURITY_ID_SCHEME_FIELD;
+import static com.opengamma.strata.measure.StandardComponents.marketDataFactory;
 
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -44,10 +47,8 @@ import com.opengamma.strata.basics.date.DayCount;
 import com.opengamma.strata.basics.date.DayCounts;
 import com.opengamma.strata.basics.date.DaysAdjustment;
 import com.opengamma.strata.basics.date.HolidayCalendarIds;
-import com.opengamma.strata.basics.index.FxIndices;
 import com.opengamma.strata.basics.index.IborIndex;
 import com.opengamma.strata.basics.index.IborIndices;
-import com.opengamma.strata.basics.index.Index;
 import com.opengamma.strata.basics.schedule.Frequency;
 import com.opengamma.strata.basics.schedule.PeriodicSchedule;
 import com.opengamma.strata.basics.schedule.StubConvention;
@@ -56,14 +57,11 @@ import com.opengamma.strata.calc.CalculationRunner;
 import com.opengamma.strata.calc.Column;
 import com.opengamma.strata.calc.Results;
 import com.opengamma.strata.calc.marketdata.MarketDataConfig;
-import com.opengamma.strata.calc.marketdata.MarketDataFactory;
 import com.opengamma.strata.calc.marketdata.MarketDataFilter;
 import com.opengamma.strata.calc.marketdata.MarketDataFunction;
 import com.opengamma.strata.calc.marketdata.MarketDataRequirements;
-import com.opengamma.strata.calc.marketdata.ObservableDataProvider;
 import com.opengamma.strata.calc.marketdata.PerturbationMapping;
 import com.opengamma.strata.calc.marketdata.ScenarioDefinition;
-import com.opengamma.strata.calc.marketdata.TimeSeriesProvider;
 import com.opengamma.strata.calc.runner.CalculationFunctions;
 import com.opengamma.strata.collect.ArgChecker;
 import com.opengamma.strata.collect.array.DoubleArray;
@@ -141,63 +139,26 @@ public class Setup {
 //	private static final DiscountingSwapProductPricer SWAP_PRICER =
 //		      DiscountingSwapProductPricer.DEFAULT;
 	private static final RatesCurveCalibrator CALIBRATOR = RatesCurveCalibrator.of(1e-9, 1e-9, 100);
-	//static List<Trade> trades = standard.load(locator).getValue();
-	//static List<Trade> totTrades = standard.load(ResourceLocator.of("classpath:trades/swaptions.csv")).getValue();
-	//static List<Trade> trades = new ArrayList<Trade>();
-	//static List<Trade> totTrades = standard.load(ResourceLocator.of("classpath:trades/BulletPaymentTrades.csv")).getValue();
-	static List<Trade> totTrades = standard.load(ResourceLocator.of("classpath:trades/policies_test2_deb.csv")).getValue();
+	
+	static List<Trade> totTrades = standard.load(ResourceLocator.of("classpath:trades/ALMall.csv")).getValue();
 	//static List<Trade> totTrades = standard.load(ResourceLocator.of("classpath:trades/totTrades.csv")).getValue();
+	static List<Trade> totPOlTrades = standard.load(ResourceLocator.of("classpath:trades/policies_test2_deb.csv")).getValue();
 	
 	
-	
-	//private static final double TOLERANCE_PV = 1.0E-6;
+	//Curve definitions
 	private static final String GROUPS = "classpath:example-calibration/curves/actiam/groups-eur_ALM.csv";
 	private static final String SETTINGS = "classpath:example-calibration/curves/actiam/settings-eur_ALM.csv";
-	private static final String CALIBRATION = "classpath:example-calibration/curves/actiam/calibrations-eur_ALM_curvefac.csv";
+	private static final String CALIBRATION = "classpath:example-calibration/curves/actiam/calibrations-eur_ALM.csv";
 	
 	static Map<CurveGroupName, RatesCurveGroupDefinition> configs2= RatesCalibrationCsvLoader.load(
 		        ResourceLocator.of(GROUPS),
 		        ResourceLocator.of(SETTINGS),
 		        ImmutableList.of(ResourceLocator.of(CALIBRATION))); 
 	public final static CurveGroupName GROUP_NAME = CurveGroupName.of("EUR-USD");
-	private static final LocalDateDoubleTimeSeriesBuilder builder0 = LocalDateDoubleTimeSeries.builder();
-	
-	private static final LocalDateDoubleTimeSeriesBuilder builder = LocalDateDoubleTimeSeries.builder();
-	static {
-		builder0.put(LocalDate.of(2020, 4, 30), 104.77d);
-		builder0.put(LocalDate.of(2007, 4, 30), 88.350332d);
-	}
-	private static final LocalDateDoubleTimeSeries TS_EUR_CPI=builder0.build();
-	static  CsvIterator csvFix= CsvIterator.of(ResourceLocator.of("classpath:example-calibration/fixings/fixings.csv").getCharSource(), true);
-	static {
-		
-		 builder.put(LocalDate.of(2020, 8, 27), -0.00477);
-		//builder.put(LocalDate.of(2007, 4, 30), 88.350332d);
-	}
-	private static final LocalDateDoubleTimeSeries EURIBOR=builder.build();
-	//tsbuilder.put(LocalDate.of(2020, 3, 30), 104.77d);
-	
-	
-	static RatesCurveGroupDefinition configL = EIOPA.CURVE_GROUP_DEFN;
-	static CurveGroupName groupName = EIOPA.CURVE_GROUP_NAME;
 	
 	public static RatesCurveGroupDefinition configA = configs2.get(GROUP_NAME);
-			
+	static RatesCurveGroupDefinition cfg= configA.toBuilder().addCurve(EIOPA.CURVE_DEFN, CHF, CHF_LIBOR_6M).build(); // EIOPA in CHF to avoid conflict in discounting in EUR
 	
-	public static Pair<ImmutableRatesProvider,ImmutableRatesProvider> provider() throws IOException, ParseException, ScriptException, URISyntaxException {
-		
-		ImmutableMarketDataBuilder builder = ImmutableMarketData.builder(VAL_DATE);
-		  ImmutableMap<QuoteId, Double> quotes = QuotesCsvLoader.load(VAL_DATE,ResourceLocator.of("classpath:example-calibration/quotes/quotesALL.csv"));
-		  builder.addValueMap(quotes);
-	  //builder.addTimeSeries(IndexQuoteId.of(EUR_EURIBOR_3M), EURIBOR);
-		  //builder.addTimeSeries(IndexQuoteId.of(EU_EXT_CPI), TS_EUR_CPI);
-		  ImmutableMarketData data = builder.build();
-		
-		  //ImmutableMarketData.of(VAL_DATE,quotes);
-		  //combined= RatesCurveGroupDefinition.builder().addCurve(configA)
-		  return  Pair.of(CALIBRATOR.calibrate(configA, data, REF_DATA),CALIBRATOR.calibrate(EIOPA.CURVE_GROUP_DEFN, data, REF_DATA));
-		  //return CALIBRATOR.calibrate(config, data, REF_DATA); 		  
-	}
 	
 	public static void main(String[] args) throws IOException, ParseException, ScriptException, URISyntaxException {
 		//test();
@@ -209,37 +170,33 @@ public class Setup {
 		
 	}
 
-	public static void test() throws IOException, ParseException, ScriptException, URISyntaxException {
-		ImmutableRatesProvider prov = provider().getFirst();
-		//SabrParametersSwaptionVolatilities test = SABR.swaptionVols(prov, VAL_DATE);
-		StringBuilder sbuilder = new StringBuilder();
-		DiscountFactors dsc = prov.discountFactors(EUR);
-		  for (int i = 0; i < 121; ++i) { 
-		      sbuilder.append(dsc.discountFactor(i)).append(';').append("\n");
-		    }
-		 // ExportUtils.export(sbuilder.toString(), "C:/Users/9318300/OneDrive - Athora Netherlands/Mijn Documenten/ALMvalidations/dscRatesEUR.csv");
-		  StringBuilder sbuilder2 = new StringBuilder();
-		  Curve ind = prov.findData(CurveName.of("EUR-DSC")).get();
-		  for (int i = 0; i < 121; ++i) { 
-		      sbuilder2.append(ind.yValue(i)).append(',').append("\n");
-		    }
-		  //ExportUtils.export(sbuilder2.toString(), "C:/Users/9318300/OneDrive - Athora Netherlands/Mijn Documenten/ALMvalidations/eurdsc.csv");
-		
-	        
-	}
+//	public static void test() throws IOException, ParseException, ScriptException, URISyntaxException {
+//		ImmutableRatesProvider prov = provider();//;.getFirst();
+//		//SabrParametersSwaptionVolatilities test = SABR.swaptionVols(prov, VAL_DATE);
+//		StringBuilder sbuilder = new StringBuilder();
+//		DiscountFactors dsc = prov.discountFactors(EUR);
+//		  for (int i = 0; i < 121; ++i) { 
+//		      sbuilder.append(dsc.discountFactor(i)).append(';').append("\n");
+//		    }
+//		 // ExportUtils.export(sbuilder.toString(), "C:/Users/9318300/OneDrive - /Mijn Documenten/ALMvalidations/dscRatesEUR.csv");
+//		  StringBuilder sbuilder2 = new StringBuilder();
+//		  Curve ind = prov.findData(CurveName.of("EUR-DSC")).get();
+//		  for (int i = 0; i < 121; ++i) { 
+//		      sbuilder2.append(ind.yValue(i)).append(',').append("\n");
+//		    }
+//		  //ExportUtils.export(sbuilder2.toString(), "C:/Users/9318300/OneDrive - /Mijn Documenten/ALMvalidations/eurdsc.csv");
+//		
+//	        
+//	}
 	 
 	final static LegalEntityId ISSUER_A = LegalEntityId.of("OG-Ticker", "GOVT");
 	
 	public static void report() throws IOException, ParseException, ScriptException, URISyntaxException {
-		
-	  
-	  
+  
 	  final CurveId ISSUER_CURVE_ID1 = CurveId.of("GOVT","EUR-DSC");
 	  final CurveId REPO_CURVE_ID1 = CurveId.of( "GOVT1 BOND1","OG-Ticker");
 	  final RepoGroup GROUP_REPO_V1 = RepoGroup.of("BONDS");
 	  final LegalEntityGroup GROUP_ISSUER_V1 = LegalEntityGroup.of("INSURER");
-  
-	  
 	  //Functions
 	  
 	  //Class<SecuritizedProductTrade<FixedCouponBond>> targetType = null;
@@ -249,11 +206,7 @@ public class Setup {
 			  //.composedWith(new PresentValueWithZspread())
 			  .composedWith(fn2);
 	  
-	  
-	 // configL=configL.toBuilder().addForwardCurve(ILS.lookup(), (Index) EU_EXT_CPI).build();
-	  //RatesMarketDataLookup ratesLookup = RatesMarketDataLookup.of(configL);
-	  //RatesMarketDataLookup ratesLookup = RatesMarketDataLookup.of(configA);
-	  //Change asset liab 
+	  //Bond curves and swaption lookups  
 	  ImmutableMap<LegalEntityId, RepoGroup> repoGroups = ImmutableMap.<LegalEntityId, RepoGroup>builder()
 			    .put(
 				ISSUER_A, GROUP_REPO_V1).build();
@@ -270,7 +223,7 @@ public class Setup {
 			    .put(Pair.of(GROUP_ISSUER_V1, Currency.USD), ISSUER_CURVE_ID1)
 			    .build();     
 	  
-	  LegalEntityDiscountingMarketDataLookup  LegalEntityR = LegalEntityDiscountingMarketDataLookup.of(
+	  LegalEntityDiscountingMarketDataLookup  LegalEntityLookup = LegalEntityDiscountingMarketDataLookup.of(
 	    		repoGroups,repoCurves,issuerGroups, issuerCurves);
 
 	  SwaptionMarketDataLookup swaptionLookup = SwaptionMarketDataLookup.of(IborIndices.EUR_EURIBOR_6M, SwaptionVolatilitiesId.of("SABR"));
@@ -288,177 +241,148 @@ public class Setup {
 		       // Column.of(Measures.PV01_MARKET_QUOTE_BUCKETED)
 		        );
 	
-	  // Scenarios
-	  
-	  //Data	t=0
+	  //calibrating  curves  
+	  ImmutableMap<QuoteId, Double> quotes = QuotesCsvLoader.load(VAL_DATE,ResourceLocator.of("classpath:example-calibration/quotes/quotes-infl.csv"));
 	  ImmutableMarketDataBuilder builder = ImmutableMarketData.builder(VAL_DATE);
-	  ImmutableMap<QuoteId, Double> quotes = QuotesCsvLoader.load(VAL_DATE,ResourceLocator.of("classpath:example-calibration/quotes/quotesALL.csv"));
 	  builder.addValueMap(quotes);
-  //builder.addTimeSeries(IndexQuoteId.of(EUR_EURIBOR_3M), EURIBOR);
 	  //builder.addTimeSeries(IndexQuoteId.of(EU_EXT_CPI), TS_EUR_CPI);
-	  ImmutableMarketData data = builder.build();
-	  ImmutableRatesProvider multicurve = CALIBRATOR.calibrate(EIOPA.CURVE_GROUP_DEFN, data, REF_DATA);//provider().getSecond();
-	 //marketdata
+	  CsvIterator csvFix= CsvIterator.of(ResourceLocator.of("classpath:example-calibration/fixings/fixingsILS.csv").getCharSource(), true);
+	  LocalDateDoubleTimeSeriesBuilder builderFix = LocalDateDoubleTimeSeries.builder();
+	  for (CsvRow row : csvFix.asIterable()) {	  
+	      String  ref= row.getValue("Reference");
+	      LocalDate date = row.getValue("Date", LoaderUtils::parseDate);
+	      double value = row.getValue("Value",LoaderUtils::parseDouble);
+	      builderFix.put(date, value);
+	      }
+	  //builder.addValueMap(quotes); 
+	  builder.addTimeSeries(IndexQuoteId.of(EU_EXT_CPI), builderFix.build());
 		
-	  	 ImmutableMarketDataBuilder builder1 = ImmutableMarketData.builder(VAL_DATE);
+	  ImmutableMap<QuoteId, Double> quotesA = QuotesCsvLoader.load(VAL_DATE,ResourceLocator.of("classpath:example-calibration/quotes/quotesALL.csv"));
+      builder.addValueMap(quotesA);
+  
+	  ImmutableMarketData data = builder.build();
+	  ImmutableRatesProvider multicurve = CALIBRATOR.calibrate(cfg, data, REF_DATA);
+	  
+	  // add all curves to market data/Used for perturbation?
+	  ImmutableMarketDataBuilder builder1 = ImmutableMarketData.builder(VAL_DATE);
 	  	multicurve.getCurves().forEach(
-	            (ccy, curve) -> builder1.addValue(CurveId.of(groupName, curve.getName()), curve));
-//	  	builder1.removeValueIf(id -> ((CurveId) id).getCurveName() == CurveName.of("USD-DSC"));
-//	  	builder1.removeValueIf(id -> ((CurveId) id).getCurveName() == CurveName.of("EUR-DSC"));
+	            (ccy, curve) -> builder1.addValue(CurveId.of(GROUP_NAME, curve.getName()), curve));
+	//	  	builder1.removeValueIf(id -> ((CurveId) id).getCurveName() == CurveName.of("USD-DSC"));
+	//	  	builder1.removeValueIf(id -> ((CurveId) id).getCurveName() == CurveName.of("EUR-DSC"));
 	  	
-	  	ImmutableMarketData data1 = builder1.build();
-		  ImmutableRatesProvider provInfl = ILS.provider();
-		  ImmutableMarketDataBuilder builder11 = ImmutableMarketData.builder(VAL_DATE);
+	  ImmutableMarketData data1 = builder1.build();
+	  //ImmutableRatesProvider provInfl = ILS.provider();
+	  ImmutableMarketDataBuilder builder11 = ImmutableMarketData.builder(VAL_DATE);
+	  
+	  Builder<LabelDateParameterMetadata> nodeMetadata = ImmutableList.<LabelDateParameterMetadata>builder();
+	  Curve discountCurve = multicurve.findData(CurveName.of("EIOPA")).get();
+	  
+	 
+	  StringBuilder sbuilder = new StringBuilder();
+	 
+	  
+	  double prevDsc=1;
+	  double d=4;
+	  double[] dr = new double[120*(int)d];
+	  for (int i=0; i < 120*d; i++) {
+		  nodeMetadata.add(LabelDateParameterMetadata.of(VAL_DATE.plusMonths(i*3),i+"M"));
+		  double curDsc=  discountCurve.yValue(i/d);
+		  dr[i]= 1*(i==0? -Math.log(discountCurve.yValue(1/d)):Math.log(prevDsc / curDsc)*d);
+		  sbuilder.append(dr[i]).append(',').append("\n");
+		  prevDsc = curDsc;
+		   
+	  }
 		  
-		  Curve curveInfl = provInfl.findData(CurveName.of("EUR-CPI")).get();
-		  
-		  builder11.addValue(CurveId.of(groupName, CurveName.of("EUR-CPI")), curveInfl);
-		  builder11.addTimeSeries(IndexQuoteId.of(EU_EXT_CPI), TS_EUR_CPI);
-		  //builder11.addValue(SwaptionVolatilitiesId.of("SABR"), SABR.swaptionVols(multicurve, VAL_DATE));
-		  LocalDateDoubleTimeSeriesBuilder builderEU = LocalDateDoubleTimeSeries.builder();
-		  LocalDateDoubleTimeSeriesBuilder builderUS = LocalDateDoubleTimeSeries.builder();
-		  for (CsvRow row : csvFix.asIterable()) {	  
-		      String  ref= row.getValue("Reference");
-		      LocalDate date = row.getValue("Date", LoaderUtils::parseDate);
-		      double value = row.getValue("Value",LoaderUtils::parseDouble);
-		      if (ref.equals("EUR-EURIBOR-6M")) builderEU.put(date, value); else builderUS.put(date, value); ;
-		}
-		  
-		  builder11.addTimeSeries(IndexQuoteId.of(IborIndex.of("EUR-EURIBOR-6M")), builderEU.build());
-		  builder11.addTimeSeries(IndexQuoteId.of(IborIndex.of("USD-LIBOR-3M")), builderUS.build());
-		  //ESG based on EIOPA
-		  Builder<LabelDateParameterMetadata> nodeMetadata = ImmutableList.<LabelDateParameterMetadata>builder();
-		  Curve discountCurve = multicurve.findData(CurveName.of("EIOPA")).get();
-		  
-		 
-		  StringBuilder sbuilder = new StringBuilder();
-		 
-		  
-		  double prevDsc=1;
-		  double d=4;
-		  double[] dr = new double[120*(int)d];
-		  for (int i=0; i < 120*d; i++) {
-			  nodeMetadata.add(LabelDateParameterMetadata.of(VAL_DATE.plusMonths(i*3),i+"M"));
-			  double curDsc=  discountCurve.yValue(i/d);
-			  dr[i]= 1*(i==0? -Math.log(discountCurve.yValue(1/d)):Math.log(prevDsc / curDsc)*d);
-			  sbuilder.append(dr[i]).append(',').append("\n");
-			  prevDsc = curDsc;
-			   
-		  }
-		  
-		  //ExportUtils.export(sbuilder.toString(), "C:\\Users\\9318300\\Documents\\projs\\ALMvalidations\\dscRatesEUR.csv");
-		  final CurveInterpolator INTERPOLATOR = CurveInterpolators.LINEAR;
-		  Curve curveESG = InterpolatedNodalCurve.of(
-			        Curves.forwardRates(CurveName.of("ESG"), DayCounts.ACT_365F, nodeMetadata.build()),
-			        DoubleArray.copyOf(IntStream.range(0, 120*(int)d).mapToDouble(i->(i/d)).toArray()),
-			        //DoubleArray.copyOf(dr),
-			        DoubleArray.filled(dr.length,0d),
-			        INTERPOLATOR);
-		  
-		  Curve curveEQ = InterpolatedNodalCurve.of(
-			        Curves.forwardRates(CurveName.of("Equity"), DayCounts.ACT_365F, nodeMetadata.build()),
-			        DoubleArray.copyOf(IntStream.range(0, 120*(int)d).mapToDouble(i->(i/d)).toArray()),
-			        DoubleArray.filled(dr.length,0d),
-			        INTERPOLATOR);
+	  //ExportUtils.export(sbuilder.toString(), "C:\\Users\\9318300\\Documents\\projs\\ALMvalidations\\dscRatesEUR.csv");
+	  final CurveInterpolator INTERPOLATOR = CurveInterpolators.LINEAR;
+	  Curve curveESG = InterpolatedNodalCurve.of(
+		        Curves.forwardRates(CurveName.of("ESG"), DayCounts.ACT_365F, nodeMetadata.build()),
+		        DoubleArray.copyOf(IntStream.range(0, 120*(int)d).mapToDouble(i->(i/d)).toArray()),
+		        //DoubleArray.copyOf(dr),
+		        DoubleArray.filled(dr.length,0d),
+		        INTERPOLATOR);
+	  
+	  Curve curveEQ = InterpolatedNodalCurve.of(
+		        Curves.forwardRates(CurveName.of("Equity"), DayCounts.ACT_365F, nodeMetadata.build()),
+		        DoubleArray.copyOf(IntStream.range(0, 120*(int)d).mapToDouble(i->(i/d)).toArray()),
+		        DoubleArray.filled(dr.length,0d),
+		        INTERPOLATOR);
 //		  Curve vols = InterpolatedNodalCurve.of(
 //			        Curves.forwardRates(CurveName.of("vols"), DayCounts.ACT_365F, nodeMetadata.build()),
 //			        DoubleArray.copyOf(IntStream.range(0, 120*(int)d).mapToDouble(i->(i/d)).toArray()),
 //			        DoubleArray.copyOf(volrates),
 //			        INTERPOLATOR);
-		  builder11.addValue(CurveId.of(groupName, CurveName.of("ESG")), curveESG);
-		  builder11.addValue(CurveId.of(groupName, CurveName.of("Equity")), curveEQ);
-		  //builder11.addValue(CurveId.of(groupName, CurveName.of("VOLS")), vols);
-		  builder11.addValue(NonObservableId.of("TimeStep"), new Double(.25d)).addValue(NonObservableId.of("BasisPointShift"), new Double(0d));
-		  ScenarioMarketData MARKET_DATA1 = ScenarioMarketData.of(
-			      1,
-			      data1.combinedWith(builder11.build()));
-		  PerturbationMapping<Curve> mapping = PerturbationMapping.of(
-			        MarketDataFilter.ofName(CurveName.of("ESG")),
-			        CurveParallelShifts.absolute(0,0.0001,0,0.0001,0,0.0001)
-		);
-		  PerturbationMapping<Curve> mapping_deb = PerturbationMapping.of(
-			        MarketDataFilter.ofName(CurveName.of("ESG")),
-			        CurveParallelShifts.absolute(0,0.0001)
-		);
-		  //NonObservableId id = new NonObservableId("TimeStep");
-		  NonObservableId id1 = NonObservableId.of("TimeStep");
-		PerturbationMapping<Double> mappingPar= PerturbationMapping.of(
-				MarketDataFilter.ofId(NonObservableId.of("TimeStep")),
-			        new AbsoluteDoubleShift(0,0,.25,.25,.75,.75));
-					//new AbsoluteDoubleShift(0,.25,.75));
-		NonObservableId bp = NonObservableId.of("BasisPointShift");
-		PerturbationMapping<Double> mapping_bp= PerturbationMapping.of(
-				  new ExactIdFilter<>(bp),
-			        new AbsoluteDoubleShift(0,0.0001,0,0.0001,0,0.0001));
-					//new AbsoluteDoubleShift(0,.25,.75));
-		PerturbationMapping<Double> mapping_bpD= PerturbationMapping.of(
-				MarketDataFilter.ofId(NonObservableId.of("BasisPointShift")),
-			        new AbsoluteDoubleShift(0,0,0));
-					//new AbsoluteDoubleShift(0,.25,.75));
-		PointShiftsBuilder  builderP = PointShifts.builder(ShiftType.ABSOLUTE);
-		List<ParameterMetadata> curveNodeMetadata = curveESG.getMetadata().getParameterMetadata().get();
-		builderP.addShift(0, curveNodeMetadata.get(0).getIdentifier(), 0.000);//scenario 0 - first node is known  
-		for (int i=0; i < 120*d; i++) {
-			builderP.addShift(i+1, curveNodeMetadata.get(i).getIdentifier(), 0.0001);
-		}
-		PerturbationMapping<ParameterizedData> mappingPS = PerturbationMapping.of(
+	  builder11.addValue(CurveId.of(GROUP_NAME, CurveName.of("ESG")), curveESG);
+	  builder11.addValue(CurveId.of(GROUP_NAME, CurveName.of("Equity")), curveEQ);
+	  //builder11.addValue(CurveId.of(groupName, CurveName.of("VOLS")), vols);
+	  builder11.addValue(NonObservableId.of("TimeStep"), new Double(.25d)).addValue(NonObservableId.of("BasisPointShift"), new Double(0d));
+	  ScenarioMarketData MARKET_DATA1 = ScenarioMarketData.of(
+		      1,
+		      data1.combinedWith(builder11.build()));
+	  PerturbationMapping<Curve> mapping = PerturbationMapping.of(
 		        MarketDataFilter.ofName(CurveName.of("ESG")),
-		        builderP.build()
+		        CurveParallelShifts.absolute(0,0.0001,0,0.0001,0,0.0001)
+	);
+	  PerturbationMapping<Curve> mapping_deb = PerturbationMapping.of(
+		        MarketDataFilter.ofName(CurveName.of("ESG")),
+		        CurveParallelShifts.absolute(0,0.0001)
+	);
+	  //NonObservableId id = new NonObservableId("TimeStep");
+	  NonObservableId id1 = NonObservableId.of("TimeStep");
+	PerturbationMapping<Double> mappingPar= PerturbationMapping.of(
+			MarketDataFilter.ofId(NonObservableId.of("TimeStep")),
+		        new AbsoluteDoubleShift(0,0,.25,.25,.75,.75));
+				//new AbsoluteDoubleShift(0,.25,.75));
+	NonObservableId bp = NonObservableId.of("BasisPointShift");
+	PerturbationMapping<Double> mapping_bp= PerturbationMapping.of(
+			  new ExactIdFilter<>(bp),
+		        new AbsoluteDoubleShift(0,0.0001,0,0.0001,0,0.0001));
+				//new AbsoluteDoubleShift(0,.25,.75));
+	PerturbationMapping<Double> mapping_bpD= PerturbationMapping.of(
+			MarketDataFilter.ofId(NonObservableId.of("BasisPointShift")),
+		        new AbsoluteDoubleShift(0,0,0));
+				//new AbsoluteDoubleShift(0,.25,.75));
+	PointShiftsBuilder  builderP = PointShifts.builder(ShiftType.ABSOLUTE);
+	List<ParameterMetadata> curveNodeMetadata = curveESG.getMetadata().getParameterMetadata().get();
+	builderP.addShift(0, curveNodeMetadata.get(0).getIdentifier(), 0.000);//scenario 0 - first node is known  
+	for (int i=0; i < 120*d; i++) {
+		builderP.addShift(i+1, curveNodeMetadata.get(i).getIdentifier(), 0.0001);
+	}
+	PerturbationMapping<ParameterizedData> mappingPS = PerturbationMapping.of(
+	        MarketDataFilter.ofName(CurveName.of("ESG")),
+			        builderP.build()
 	);
 //		 
-		ScenarioDefinition scenarioDefinition = ScenarioDefinition.empty();
-		  //LabelDateParameterMetadataBuilder nodes= LabelDateParameterMetadataBuilder.builder();
-		  
-		  //Lookup w/o curve settings
-		  ImmutableMap<Currency, CurveId> map = ImmutableMap.of(EUR, CurveId.of(groupName, CurveName.of("ESG")));
-		  //ImmutableMap<Currency, CurveId> map0 = ImmutableMap.of();
-		  ImmutableMap<Index, CurveId> map1 = ImmutableMap.of(FxIndices.EUR_USD_ECB, CurveId.of(groupName, CurveName.of("Equity")),IborIndices.EUR_LIBOR_3M, CurveId.of(groupName, CurveName.of("VOLS")),(Index)EU_EXT_CPI, CurveId.of(groupName, CurveName.of("EUR-CPI")));
-		  RatesMarketDataLookup ratesLookup1 = 
-				  RatesMarketDataLookup.of(map,map1);
-		  // pre calculate the diff. matrices 
-		 
-		  ReferenceData b = ((ImmutablePolicyConvention) StandardPolicyConventions.UNIT_LINKED).addRefdata(REF_DATA);
-		REF_DATA= REF_DATA.combinedWith(b); 
-
-		  //configL=configL.toBuilder().addForwardCurve(ILS.lookup(), (Index) EU_EXT_CPI).build();
-		  
-		  CalculationRules rules = CalculationRules.of(functions,ratesLookup1, LegalEntityR,swaptionLookup);
-			  	MarketDataRequirements reqs = MarketDataRequirements.of(rules, totTrades, columns, REF_DATA);
-			  	//reqs.builder().addValues(id1).build();
-			  //ScenarioDefinition scenarioDefinition = ScenarioDefinition.empty();
-			  	reqs= MarketDataRequirements.combine(Arrays.asList(reqs,MarketDataRequirements.builder().addValues(bp).addValues(id1).build()));
-			  	//MarketDataFactory mf = marketDataFactory();
-			  	//List<MarketDataFunction<?, ?>> stdFuncts = new ArrayList();
-			  	List<MarketDataFunction<?, ?>> li = StandardComponents.marketDataFunctions();
-			  	ArrayList li2 = new ArrayList<>(li);
-			  	li2.add(new TestMarketDataFunction());
-			  	 MarketDataFactory factory = MarketDataFactory.of(ObservableDataProvider.none(), TimeSeriesProvider.none(),li2);
-//			  	MarketDataBox<Curve> md23 = MARKET_DATA1.getValue(CurveId.of(groupName, CurveName.of("ESG")));
-//			  	 MarketDataBox<Double> md2 = MARKET_DATA1.getValue(id1);
-			  	 ScenarioMarketData scenarioMarketData =factory.createMultiScenario(reqs, MarketDataConfig.empty(), MARKET_DATA1, REF_DATA, scenarioDefinition);
-			  //l1.get(0).expiryDate(AdjustableDate.of(VAL_DATE)).build();
-//			  if (k==0 ) {
-//				  columns.add(Column.of(Measures1.presentValueWithSpread));
-//			  }
-			  //CalculationRules rules = CalculationRules.of(functions,ratesLookup, LegalEntityR,swaptionLookup);
-			  Results results = runner.calculateMultiScenario(rules, totTrades, columns,scenarioMarketData, REF_DATA);
-			  ReportCalculationResults calculationResults =
-				        ReportCalculationResults.of(VAL_DATE, totTrades, columns, results, functions, REF_DATA);
-			  
-			  //Report
-			  TradeReportTemplate reportTemplate = ExampleData.loadTradeReportTemplate("ils-report-template2"); 
-			  //TradeReportTemplate reportTemplate = ExampleData.loadTradeReportTemplate("all-cashflow-report-template3");
-			  
-			  TradeReport tradeReport = TradeReport.of(calculationResults, reportTemplate);
-			 tradeReport.writeAsciiTable(System.out);
-			  int k=1;
-			  try {
-					tradeReport.writeCsv(new FileOutputStream("C:\\Users\\M65H036\\Onedrive - NN\\Documents\\ALMvalidations\\tradesOut.csv"));
-				  } catch (FileNotFoundException ed) {
-					// TODO Auto-generated catch block
-					ed.printStackTrace();
-				  }
-			  
+	ScenarioDefinition scenarioDefinition = ScenarioDefinition.empty();
+	RatesMarketDataLookup ratesLookup = RatesMarketDataLookup.of(cfg);
+	  //store policy convention related information  
+	  ReferenceData b = ((ImmutablePolicyConvention) StandardPolicyConventions.UNIT_LINKED).addRefdata(REF_DATA);
+	  REF_DATA= REF_DATA.combinedWith(b); 
+	
+	  //configL=configL.toBuilder().addForwardCurve(ILS.lookup(), (Index) EU_EXT_CPI).build();
+	  
+	  CalculationRules rules = CalculationRules.of(functions, ratesLookup, LegalEntityLookup,swaptionLookup);
+	  	MarketDataRequirements reqs = MarketDataRequirements.of(rules, totTrades, columns, REF_DATA);
+	  	reqs= MarketDataRequirements.combine(Arrays.asList(reqs,MarketDataRequirements.builder().addValues(bp).addValues(id1).build()));
+	  	 ScenarioMarketData scenarioMarketData =marketDataFactory().createMultiScenario(reqs, MarketDataConfig.empty(), MARKET_DATA1, REF_DATA, scenarioDefinition);
+	  Results results = runner.calculateMultiScenario(rules, totTrades, columns,scenarioMarketData, REF_DATA);
+	  ReportCalculationResults calculationResults =
+		        ReportCalculationResults.of(VAL_DATE, totTrades, columns, results, functions, REF_DATA);
+	  
+	  //Report
+	  TradeReportTemplate reportTemplate = ExampleData.loadTradeReportTemplate("ils-report-template2"); 
+	  //TradeReportTemplate reportTemplate = ExampleData.loadTradeReportTemplate("all-cashflow-report-template3");
+	  
+	  TradeReport tradeReport = TradeReport.of(calculationResults, reportTemplate);
+	 tradeReport.writeAsciiTable(System.out);
+	  int k=1;
+	  try {
+			tradeReport.writeCsv(new FileOutputStream("C:\\Users\\M65H036\\Onedrive - NN\\Documents\\ALMvalidations\\tradesOut.csv"));
+		  } catch (FileNotFoundException ed) {
+			// TODO Auto-generated catch block
+			ed.printStackTrace();
+		  }
+	  
 				
 //		}
 }

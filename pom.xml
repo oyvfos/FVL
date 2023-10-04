@@ -1,12 +1,11 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
-  <groupId>com.vivat</groupId>
-  <artifactId>test</artifactId>
+  <groupId>com.oyvind</groupId>
+  <artifactId>FVL</artifactId>
   <version>0.0.1-SNAPSHOT</version>
  
    <dependencies>
- <!-- https://stackoverflow.com/questions/21252800/how-to-tell-maven-to-disregard-ssl-errors-and-trusting-all-certs/21266642#21266642 -->
- <!-- don't use embedded maven -->  
+ <!--if you're behind firewall: https://stackoverflow.com/questions/21252800/how-to-tell-maven-to-disregard-ssl-errors-and-trusting-all-certs/21266642#21266642 -->
    <dependency>
    			
         <groupId>com.google.guava</groupId>
@@ -135,6 +134,7 @@
    
  
     <build>
+     <pluginManagement>
     <plugins>
 	<plugin>
     <groupId>org.apache.maven.plugins</groupId>
@@ -194,7 +194,9 @@
         </configuration>
       </plugin>
       </plugins>
-      </build> 
+      </pluginManagement>
+    
+    </build> 
       
      <properties>
     
