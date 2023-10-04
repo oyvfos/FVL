@@ -379,6 +379,10 @@ private static final BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, Simp
 		  ImmutablePolicyConvention.of(
           "UNIT_LINKED", List.of(IC,D,M, R, IR,IRDerivative,IndF)
           );
+  public static final PolicyConvention UNIT_FIXED =
+		  ImmutablePolicyConvention.of(
+          "UNIT_LINKED", List.of(IC,D,M, R, IR,IRDerivative,IndF)
+          );
 
   
 
