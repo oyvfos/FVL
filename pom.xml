@@ -6,6 +6,7 @@
  
    <dependencies>
  <!-- https://stackoverflow.com/questions/21252800/how-to-tell-maven-to-disregard-ssl-errors-and-trusting-all-certs/21266642#21266642 -->
+ <!-- don't use embedded maven -->  
    <dependency>
    			
         <groupId>com.google.guava</groupId>
