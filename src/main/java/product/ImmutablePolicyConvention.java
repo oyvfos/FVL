@@ -81,13 +81,13 @@ public final class ImmutablePolicyConvention
       List<BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix>> funcs) {
         return new ImmutablePolicyConvention(name, funcs);
     }
-    public  ReferenceData addRefdata(
-              ReferenceData rd) {
-        Map<ReferenceDataId<?>, Object> map = new HashMap<>();
+    public  ReferenceData refData(
+            ) {
+        //Map<ReferenceDataId<?>, Object> map = new HashMap<>();
       
         ImmutableMap.Builder<ReferenceDataId<?>, Object> builderRefData = ImmutableMap.builder();
-        builderRefData.put(DifferentiationMatrixId.of("OG-Ticker", "funcs"), DifferentiationMatrix.of(DifferentiationMatrixId.of("OG-Ticker", "dS"), this.funcs)).build();
-            return rd.combinedWith((ImmutableReferenceData) ImmutableReferenceData.of(builderRefData.build()));
+        builderRefData.put(DifferentiationMatrixId.of("OG-Ticker", this.name), DifferentiationMatrix.of(DifferentiationMatrixId.of("OG-Ticker", "dS"), this.funcs)).build();
+            return (ImmutableReferenceData) ImmutableReferenceData.of(builderRefData.build());
                 //return rd.combinedWith(this.funcs);
             }
     
@@ -103,14 +103,13 @@ public final class ImmutablePolicyConvention
     * @return the convention
     */
     
-    @Override
-    public PolicyTrade toTrade(TradeInfo info, Policy policy, ReferenceData referenceData) {
-        
-        // override for Javadoc
-        // return  PolicyConvention.createTrade(info, policy.toBuilder().calcMethod(StochasticPIDEComputation.of(0)).build(), referenceData);
-        return PolicyTrade.of(info, policy.toBuilder().calcMethod(StochasticPIDEComputation.of(0)).build());
-      }
-    
+    //    public PolicyTrade toTrade(TradeInfo info, Policy policy, ReferenceData referenceData) {
+//        
+//        // override for Javadoc
+//        // return  PolicyConvention.createTrade(info, policy.toBuilder().calcMethod(StochasticPIDEComputation.of(0)).build(), referenceData);
+//        return PolicyTrade.of(info, policy.toBuilder().calcMethod(StochasticPIDEComputation.of(0)).build());
+//      }
+//    
     //-------------------------------------------------------------------------
     @ImmutableValidator
     private void validate() {

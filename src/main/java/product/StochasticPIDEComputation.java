@@ -83,7 +83,8 @@ implements PolicyComputation, ImmutableBean, Serializable {
   }
   public CurrencyAmount presentValue(ResolvedPolicy fra, RatesProvider provider, ReferenceData refData, Pair<SimpleMatrix, SimpleMatrix> solutions) {    
 		  int col = solutions.getFirst().getNumCols();
-		  List<BiFunction<Pair<ResolvedPolicy, RatesProvider>, Double, SimpleMatrix>> funcs =  refData.getValue(DifferentiationMatrixId.of("OG-Ticker", "funcs")).getDifferenationMatrix() ;  
+		  List<BiFunction<Pair<ResolvedPolicy, RatesProvider>, Double, SimpleMatrix>> funcs =  refData
+				  .getValue(DifferentiationMatrixId.of("OG-Ticker", fra.getConvention().getName())).getDifferenationMatrix() ;  
 	      BiFunction<Pair<ResolvedPolicy, RatesProvider>, Double, SimpleMatrix> Indf = funcs.get(5);// fixed place
 	      int ind = (int)Indf.apply(Pair.of(fra,provider),0d).get(0, 0);
 		  if (col==1) ind=0;
@@ -92,7 +93,8 @@ implements PolicyComputation, ImmutableBean, Serializable {
   public PointSensitivityBuilder sensBuilder(ResolvedPolicy resolvedPolicy, RatesProvider provider,ReferenceData refData, Pair<SimpleMatrix, SimpleMatrix> diffMat) {
       double dt = provider.data(NonObservableId.of("TimeStep"));
       if (diffMat.getSecond().getNumRows()==1) return PointSensitivityBuilder.none();
-      List<BiFunction<Pair<ResolvedPolicy, RatesProvider>, Double, SimpleMatrix>> funcs =  refData.getValue(DifferentiationMatrixId.of("OG-Ticker", "funcs")).getDifferenationMatrix() ;  
+      List<BiFunction<Pair<ResolvedPolicy, RatesProvider>, Double, SimpleMatrix>> funcs =  refData
+    		  .getValue(DifferentiationMatrixId.of("OG-Ticker", resolvedPolicy.getConvention().getName())).getDifferenationMatrix() ;  
       BiFunction<Pair<ResolvedPolicy, RatesProvider>, Double, SimpleMatrix> IRDerf = funcs.get(5);// fixed place
       List<Double> l= new ArrayList<Double>();
       List<IborRateSensitivity> ps=Lists.newArrayList();
@@ -116,7 +118,7 @@ implements PolicyComputation, ImmutableBean, Serializable {
  // Solves the PIDE
   public Pair<SimpleMatrix, SimpleMatrix> diffMat(ResolvedPolicy resolvedPolicy, RatesProvider provider, ReferenceData refData ) {
 	  //long start = System.currentTimeMillis();
-		    List<BiFunction<Pair<ResolvedPolicy, RatesProvider>, Double, SimpleMatrix>> funcs =  refData.getValue(DifferentiationMatrixId.of("OG-Ticker", "funcs")).getDifferenationMatrix() ;
+		    List<BiFunction<Pair<ResolvedPolicy, RatesProvider>, Double, SimpleMatrix>> funcs =  refData.getValue(DifferentiationMatrixId.of("OG-Ticker", resolvedPolicy.getConvention().getName())).getDifferenationMatrix() ;
           //List.of(IC,D,M, R,IR, IRDerivative, ind)
 	       BiFunction<Pair<ResolvedPolicy, RatesProvider>, Double, SimpleMatrix> IC = funcs.get(0);//.apply(resolvedPolicy,1.0);
 	       BiFunction<Pair<ResolvedPolicy, RatesProvider>, Double, SimpleMatrix> Df = funcs.get(1);//.apply(resolvedPolicy,1.0);
@@ -124,13 +126,13 @@ implements PolicyComputation, ImmutableBean, Serializable {
 	       BiFunction<Pair<ResolvedPolicy, RatesProvider>, Double, SimpleMatrix> Rf = funcs.get(3);//.apply(resolvedPolicy,1.0);
 	       BiFunction<Pair<ResolvedPolicy, RatesProvider>, Double, SimpleMatrix> IRf = funcs.get(4);//.apply(resolvedPolicy,1.0);
 	       BiFunction<Pair<ResolvedPolicy, RatesProvider>, Double, SimpleMatrix> Indf = funcs.get(6);//.apply(resolvedPolicy,1.0);    
-          int exp = Period.between(provider.getValuationDate(),resolvedPolicy.getExpiryDate()).getYears();
-          int expM = Period.between(provider.getValuationDate(),resolvedPolicy.getExpiryDate()).getMonths(); 
-          double dt = provider.data(NonObservableId.of("TimeStep"));
-          double steps = exp + dt*Math.floor(expM/(12*dt));
-          if (steps==0) return Pair.of(SimpleMatrix.diag(0),SimpleMatrix.diag(0));
-          SimpleMatrix endCond=IC.apply(Pair.of(resolvedPolicy,provider),0.0);
-          int blockDim = endCond.getNumRows();
+	          int exp = Period.between(provider.getValuationDate(),resolvedPolicy.getExpiryDate()).getYears();
+	          int expM = Period.between(provider.getValuationDate(),resolvedPolicy.getExpiryDate()).getMonths(); 
+	          double dt = provider.data(NonObservableId.of("TimeStep"));
+	          double steps = exp + dt*Math.floor(expM/(12*dt));
+	          if (steps==0) return Pair.of(SimpleMatrix.diag(0),SimpleMatrix.diag(0));
+	          SimpleMatrix endCond=IC.apply(Pair.of(resolvedPolicy,provider),0.0);
+	          int blockDim = endCond.getNumRows();
          SimpleMatrix ySAdj = new SimpleMatrix(blockDim,1);
          ySAdj.set((int)Indf.apply(Pair.of(resolvedPolicy,provider),0d).get(0, 0), 0, 1);
          SimpleMatrix yS = endCond;

@@ -158,11 +158,21 @@ public class Setup {
 		        ImmutableList.of(ResourceLocator.of(CALIBRATION))); 
 	public final static CurveGroupName GROUP_NAME = CurveGroupName.of("EUR-USD");
 	
-	public static RatesCurveGroupDefinition configA = configs2.get(GROUP_NAME);
-	static RatesCurveGroupDefinition cfg= configA.toBuilder().addCurve(EIOPA.CURVE_DEFN, CHF, CHF_LIBOR_6M).build(); // EIOPA in CHF to avoid conflict in discounting in EUR
+	public static RatesCurveGroupDefinition cfg = configs2.get(GROUP_NAME).toBuilder()
+			.addCurve(EIOPA.CURVE_DEFN, CHF, CHF_LIBOR_6M).build(); // hack:EIOPA in CHF to avoid conflict in discounting assets in EUR
+	//Create lookup from config and add remaining curves
+	 
+	 public static RatesCurveGroupDefinition cfgComplete = cfg.toBuilder()
+	  .addForwardCurve(CurveName.of("Equity"), FxIndices.EUR_USD_ECB)
+	  .addForwardCurve(CurveName.of("EUR-CPI"), (Index)EU_EXT_CPI)
+	  .addDiscountCurve(CurveName.of("ESG"), EUR)//.addDiscountCurve(, (Index)EU_EXT_CPI)
+	  
+//.addForwardCurve(CurveName.of("Equity"), FxIndices.EUR_USD_ECB)
+	  .build();
+	 static RatesMarketDataLookup ratesLookup = RatesMarketDataLookup.of(cfgComplete);
 	
-	
-	public static void main(String[] args) throws IOException, ParseException, ScriptException, URISyntaxException {
+	 
+	 public static void main(String[] args) throws IOException, ParseException, ScriptException, URISyntaxException {
 		//test();
 		long start = System.currentTimeMillis();
 		report();
@@ -172,24 +182,7 @@ public class Setup {
 		
 	}
 
-//	public static void test() throws IOException, ParseException, ScriptException, URISyntaxException {
-//		ImmutableRatesProvider prov = provider();//;.getFirst();
-//		//SabrParametersSwaptionVolatilities test = SABR.swaptionVols(prov, VAL_DATE);
-//		StringBuilder sbuilder = new StringBuilder();
-//		DiscountFactors dsc = prov.discountFactors(EUR);
-//		  for (int i = 0; i < 121; ++i) { 
-//		      sbuilder.append(dsc.discountFactor(i)).append(';').append("\n");
-//		    }
-//		 // ExportUtils.export(sbuilder.toString(), "C:/Users/9318300/OneDrive - /Mijn Documenten/ALMvalidations/dscRatesEUR.csv");
-//		  StringBuilder sbuilder2 = new StringBuilder();
-//		  Curve ind = prov.findData(CurveName.of("EUR-DSC")).get();
-//		  for (int i = 0; i < 121; ++i) { 
-//		      sbuilder2.append(ind.yValue(i)).append(',').append("\n");
-//		    }
-//		  //ExportUtils.export(sbuilder2.toString(), "C:/Users/9318300/OneDrive - /Mijn Documenten/ALMvalidations/eurdsc.csv");
-//		
-//	        
-//	}
+
 	 
 	final static LegalEntityId ISSUER_A = LegalEntityId.of("OG-Ticker", "GOVT");
 	
@@ -243,7 +236,7 @@ public class Setup {
 		       // Column.of(Measures.PV01_MARKET_QUOTE_BUCKETED)
 		        );
 	
-	  //calibrating  curves  
+	// MARKET DATA for calibrating  curves  
 	  ImmutableMap<QuoteId, Double> quotes = QuotesCsvLoader.load(VAL_DATE,ResourceLocator.of("classpath:example-calibration/quotes/quotes-infl.csv"));
 	  ImmutableMarketDataBuilder builder = ImmutableMarketData.builder(VAL_DATE);
 	  builder.addValueMap(quotes);
@@ -265,7 +258,8 @@ public class Setup {
 	  ImmutableMarketData data = builder.build();
 	  ImmutableRatesProvider multicurve = CALIBRATOR.calibrate(cfg, data, REF_DATA);
 	  
-	  // add all curves to market data/Used for perturbation?
+	  
+	  // add all calibrated curves to market data
 	  ImmutableMarketDataBuilder builder1 = ImmutableMarketData.builder(VAL_DATE);
 	  	multicurve.getCurves().forEach(
 	            (ccy, curve) -> builder1.addValue(CurveId.of(GROUP_NAME, curve.getName()), curve));
@@ -276,47 +270,43 @@ public class Setup {
 	  //ImmutableRatesProvider provInfl = ILS.provider();
 	  ImmutableMarketDataBuilder builder11 = ImmutableMarketData.builder(VAL_DATE);
 	  
-	  Builder<LabelDateParameterMetadata> nodeMetadata = ImmutableList.<LabelDateParameterMetadata>builder();
-	  Curve discountCurve = multicurve.findData(CurveName.of("EIOPA")).get();
 	  
-	 
-	  StringBuilder sbuilder = new StringBuilder();
-	 
+	  //actually creates a forward curve from the discount curve - but not used 
+	  Builder<LabelDateParameterMetadata> nodeMetadata = ImmutableList.<LabelDateParameterMetadata>builder();
+//	  Curve discountCurve = multicurve.findData(CurveName.of("EIOPA")).get();
 	  
 	  double prevDsc=1;
 	  double d=4;
 	  double[] dr = new double[120*(int)d];
+	// StringBuilder sbuilder = new StringBuilder();
 	  for (int i=0; i < 120*d; i++) {
 		  nodeMetadata.add(LabelDateParameterMetadata.of(VAL_DATE.plusMonths(i*3),i+"M"));
-		  double curDsc=  discountCurve.yValue(i/d);
-		  dr[i]= 1*(i==0? -Math.log(discountCurve.yValue(1/d)):Math.log(prevDsc / curDsc)*d);
-		  sbuilder.append(dr[i]).append(',').append("\n");
-		  prevDsc = curDsc;
-		   
-	  }
-		  
+//		  double curDsc=  discountCurve.yValue(i/d);
+//		  dr[i]= 1*(i==0? -Math.log(discountCurve.yValue(1/d)):Math.log(prevDsc / curDsc)*d);
+//		  //sbuilder.append(dr[i]).append(',').append("\n");
+//		  prevDsc = curDsc;
+//		   
+	  }  
 	  //ExportUtils.export(sbuilder.toString(), "C:\\Users\\9318300\\Documents\\projs\\ALMvalidations\\dscRatesEUR.csv");
+	// Used for monte carlo HW (eq or ir) are forwards- move somewhere else?
+	  
 	  final CurveInterpolator INTERPOLATOR = CurveInterpolators.LINEAR;
 	  Curve curveESG = InterpolatedNodalCurve.of(
 		        Curves.forwardRates(CurveName.of("ESG"), DayCounts.ACT_365F, nodeMetadata.build()),
 		        DoubleArray.copyOf(IntStream.range(0, 120*(int)d).mapToDouble(i->(i/d)).toArray()),
 		        //DoubleArray.copyOf(dr),
-		        DoubleArray.filled(dr.length,0d),
+		        DoubleArray.filled(dr.length,0d),// zeros - actual curves from MC build shifts 
 		        INTERPOLATOR);
 	  
 	  Curve curveEQ = InterpolatedNodalCurve.of(
 		        Curves.forwardRates(CurveName.of("Equity"), DayCounts.ACT_365F, nodeMetadata.build()),
 		        DoubleArray.copyOf(IntStream.range(0, 120*(int)d).mapToDouble(i->(i/d)).toArray()),
-		        DoubleArray.filled(dr.length,0d),
+		        DoubleArray.filled(dr.length,0d), // zeros - actual curves from build shifts
 		        INTERPOLATOR);
-//		  Curve vols = InterpolatedNodalCurve.of(
-//			        Curves.forwardRates(CurveName.of("vols"), DayCounts.ACT_365F, nodeMetadata.build()),
-//			        DoubleArray.copyOf(IntStream.range(0, 120*(int)d).mapToDouble(i->(i/d)).toArray()),
-//			        DoubleArray.copyOf(volrates),
-//			        INTERPOLATOR);
+	  
 	  builder11.addValue(CurveId.of(GROUP_NAME, CurveName.of("ESG")), curveESG);
 	  builder11.addValue(CurveId.of(GROUP_NAME, CurveName.of("Equity")), curveEQ);
-	  //builder11.addValue(CurveId.of(groupName, CurveName.of("VOLS")), vols);
+	  
 	  builder11.addValue(NonObservableId.of("TimeStep"), new Double(.25d)).addValue(NonObservableId.of("BasisPointShift"), new Double(0d));
 	  ScenarioMarketData MARKET_DATA1 = ScenarioMarketData.of(
 		      1,
@@ -329,6 +319,8 @@ public class Setup {
 		        MarketDataFilter.ofName(CurveName.of("ESG")),
 		        CurveParallelShifts.absolute(0,0.0001)
 	);
+	
+	// Various perturbations for additional sensitivities   
 	  //NonObservableId id = new NonObservableId("TimeStep");
 	  NonObservableId id1 = NonObservableId.of("TimeStep");
 	PerturbationMapping<Double> mappingPar= PerturbationMapping.of(
@@ -354,26 +346,31 @@ public class Setup {
 	        MarketDataFilter.ofName(CurveName.of("ESG")),
 			        builderP.build()
 	);
-//		 
+//	PerturbationMapping<ParameterizedData> mapping2 = PerturbationMapping.of(
+//	  MarketDataFilter.ofName(CurveName.of("ESG")),
+//    // no shift for the base scenario, 1bp absolute shift to calibrated curves (zeros)
+//    buildShifts(curveESG,1));
+//	PerturbationMapping<ParameterizedData> mapping3 = PerturbationMapping.of(
+//    MarketDataFilter.ofName(CurveName.of("Equity")),
+//    // no shift for the base scenario, 1bp absolute shift to calibrated curves (zeros)
+//    buildShifts(curveEQ,5));
+//    //ScenarioDefinition scenarioDefinition = ScenarioDefinition.ofMappings(mapping2, mapping3); 
 	ScenarioDefinition scenarioDefinition = ScenarioDefinition.empty();
-	//Lookup w/o curve settings
-	 
-	  cfg=cfg.toBuilder()
-	  .addForwardCurve(CurveName.of("Equity"), FxIndices.EUR_USD_ECB)
-	  .addForwardCurve(CurveName.of("EUR-CPI"), (Index)EU_EXT_CPI)
-	  //.addForwardCurve(CurveName.of("Equity"), FxIndices.EUR_USD_ECB)
-	  .build();
-	 RatesMarketDataLookup ratesLookup = RatesMarketDataLookup.of(cfg);
-	  //store policy convention related information  
-	  ReferenceData b = ((ImmutablePolicyConvention) StandardPolicyConventions.UNIT_LINKED).addRefdata(REF_DATA);
-	  REF_DATA= REF_DATA.combinedWith(b); 
+	
+	
+	
+	  
+	 //store policy convention related information   
+	  REF_DATA= REF_DATA
+			  .combinedWith(((ImmutablePolicyConvention) StandardPolicyConventions.UNIT_LINKED).refData())
+			  .combinedWith(((ImmutablePolicyConvention) StandardPolicyConventions.UNIT_FIXED).refData()); 
 	
 	  //configL=configL.toBuilder().addForwardCurve(ILS.lookup(), (Index) EU_EXT_CPI).build();
 	  
 	  CalculationRules rules = CalculationRules.of(functions, ratesLookup, LegalEntityLookup,swaptionLookup);
-	  	MarketDataRequirements reqs = MarketDataRequirements.of(rules, totPOlTrades, columns, REF_DATA);
-	  	reqs= MarketDataRequirements.combine(Arrays.asList(reqs,MarketDataRequirements.builder().addValues(bp).addValues(id1).build()));
-	  	 ScenarioMarketData scenarioMarketData =marketDataFactory().createMultiScenario(reqs, MarketDataConfig.empty(), MARKET_DATA1, REF_DATA, scenarioDefinition);
+	  MarketDataRequirements reqs = MarketDataRequirements.of(rules, totPOlTrades, columns, REF_DATA);
+	  reqs= MarketDataRequirements.combine(Arrays.asList(reqs,MarketDataRequirements.builder().addValues(bp).addValues(id1).build()));
+	  ScenarioMarketData scenarioMarketData =marketDataFactory().createMultiScenario(reqs, MarketDataConfig.empty(), MARKET_DATA1, REF_DATA, scenarioDefinition);
 	  Results results = runner.calculateMultiScenario(rules, totPOlTrades, columns,scenarioMarketData, REF_DATA);
 	  ReportCalculationResults calculationResults =
 		        ReportCalculationResults.of(VAL_DATE, totPOlTrades, columns, results, functions, REF_DATA);
@@ -395,7 +392,7 @@ public class Setup {
 				
 //		}
 }
-	private static PointShifts buildShifts1(Curve basisCurve,double k) {
+	private static PointShifts buildShifts(Curve basisCurve,double k) {
 		PointShiftsBuilder  builder = PointShifts.builder(ShiftType.ABSOLUTE);
 	    //CsvFile csv = CsvFile.of(resource.getCharSource(), false);
 	    //Map<CurveName, List<CurveNode>> allNodes = new HashMap<>();

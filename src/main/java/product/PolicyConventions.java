@@ -17,6 +17,7 @@ public final class PolicyConventions {
    * USD-dominated standardized credit default swap.
    */
   public static final PolicyConvention UNIT_LINKED = PolicyConvention.of(StandardPolicyConventions.UNIT_LINKED.getName());
+  public static final PolicyConvention UNIT_FIXED = PolicyConvention.of(StandardPolicyConventions.UNIT_FIXED.getName());
 
   //-------------------------------------------------------------------------
   /**

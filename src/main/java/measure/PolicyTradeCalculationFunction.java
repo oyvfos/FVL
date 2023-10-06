@@ -46,6 +46,7 @@ import product.Policy;
 import product.PolicyComputation;
 import product.PolicyTrade;
 import product.ResolvedPolicyTrade;
+import product.StochasticPIDEComputation;
 
 /**
  * Perform calculations on a single {@code PolicyTrade} for each of a set of scenarios.
@@ -176,14 +177,15 @@ public class PolicyTradeCalculationFunction
     List<Pair<SimpleMatrix, SimpleMatrix>> map=  new ArrayList<Pair<SimpleMatrix, SimpleMatrix>>();
 	   
 	  for (int i = 0; i < marketData.getScenarioCount(); i++) {
-		  map.add(PRICER.diffMat(resolved.getProduct().getCalcMethod(),resolved.getProduct(), marketData.scenario(i).ratesProvider(), refData));
+		  //dispatch possibilities - not yet neccessary
+		  map.add(PRICER.diffMat(StochasticPIDEComputation.of(0.0),resolved.getProduct(), marketData.scenario(i).ratesProvider(), refData));
 	  }
     
     // loop around measures, calculating all scenarios for one measure
     Map<Measure, Result<?>> results = new HashMap<>();
     for (Measure measure : measures) {
       	
-      results.put(measure, calculate(resolved.getProduct().getCalcMethod(), measure, resolved, marketData,refData, map));
+      results.put(measure, calculate(StochasticPIDEComputation.of(0.0), measure, resolved, marketData,refData, map));
     }
     return results;
   }

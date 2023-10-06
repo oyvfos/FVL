@@ -137,12 +137,12 @@ public interface PolicyConvention
    * @throws ReferenceDataNotFoundException if an identifier cannot be resolved in the reference data
    */
   
-  public static PolicyTrade createTrade(
-		  TradeInfo info, Policy policy, ReferenceData referenceData) {
-
-    // override for Javadoc
-    return PolicyConvention.createTrade(info, policy.toBuilder().calcMethod(StochasticPIDEComputation.of(0)).build(), referenceData);
-  }
+//  public static PolicyTrade createTrade(
+//		  TradeInfo info, Policy policy, ReferenceData referenceData) {
+//
+//    // override for Javadoc
+//    return PolicyConvention.createTrade(info, policy.toBuilder().calcMethod(StochasticPIDEComputation.of(0)).build(), referenceData);
+//  }
 
   /**
    * Creates a trade based on this convention.
@@ -163,12 +163,12 @@ public interface PolicyConvention
    * @return the trade
    */
   
-  public default PolicyTrade toTrade(TradeInfo info, Policy policy, ReferenceData referenceData) {
-       
-    // override for Javadoc
-	 return  PolicyConvention.createTrade(info, policy.toBuilder().calcMethod(StochasticPIDEComputation.of(0)).build(), referenceData);
-    //return PolicyTrade.of(info, policy.toBuilder().calcMethod(StochasticPIDEComputation.of(0)).build());
-  }
+//  public default PolicyTrade toTrade(TradeInfo info, Policy policy, ReferenceData referenceData) {
+//       
+//    // override for Javadoc
+//	 return  PolicyConvention.createTrade(info, policy.toBuilder().calcMethod(StochasticPIDEComputation.of(0)).build(), referenceData);
+//    //return PolicyTrade.of(info, policy.toBuilder().calcMethod(StochasticPIDEComputation.of(0)).build());
+//  }
 
   /**
    * Creates a trade based on this convention.

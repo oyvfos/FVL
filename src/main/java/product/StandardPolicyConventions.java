@@ -212,7 +212,7 @@ static Surface lapseM = addRefDatafromCSV("VERVAL_UL_2019M.csv","verv-man");
 static Surface lapseF = addRefDatafromCSV("VERVAL_UL_2019V.csv","verv-vrouw");
 
 		
-private static final BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix> IC =
+private static final BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix> IC_F =
 	    //end condition / initial condition  - not a function of t  
 		new BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix>() {
 	        @Override
@@ -234,14 +234,64 @@ private static final BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, Simp
 	                    double tar = tar220.zValue(age+i, valYear+i);// Obviously hardcoded- must be derived from policy
 	                    y0=(tar*(1-mr/100)+gr*(1+tar))*y0*dt +y0;
 	                } 
-	        }
-	            double GK=y0;    
-	       SimpleMatrix ic = new SimpleMatrix(blockDim,1,true,DoubleArray.copyOf(vectors.get(0).stream().map(i-> GK + Math.max(0,i-GK)).toArray()).toArray());  
-	       return ic; 
+	            }
+	            double GK=y0;
+	            Curve fwdCurve = provider.findData(CurveName.of("ESG")).get();
+	            Curve eqCurve = provider.findData(CurveName.of("Equity")).get();
+	            double terbeh = resolvedPolicy.getExpenseRateinvestementAccount();
+	    	  	//if (steps==0) return Pair.of(SimpleMatrix.diag(0),SimpleMatrix.diag(0));
+	    	  	y0=resolvedPolicy.getInvestementAccount();
+	    	   	double[] fv = new double[(int) (steps/dt)]; 
+	    	  	for (double i = 0; i < steps; i=i+dt) {
+	    	  		double qx = qxM.zValue(age+i, valYear+i);
+	    	  		double fwd1= fwdCurve.yValue(i);
+	    	  		double eq= eqCurve.yValue(i);
+	    	  		double tar = tar220.zValue(age+i, valYear+i);
+	    	  		//qx=0.007;tar=0.8;terbeh=0.015;fwd1=0.005;
+	    	  		fv[(int) (i/dt)]=y0;
+	    	  		y0=(-terbeh -tar*qx + (fwd1 + fwd1)/2)*y0*dt +y0;
+	    	  		
+	    	  
+	    	  	}
+	            
+	            return  new SimpleMatrix(1,1,true,y0);  
+	             
 	       //return SimpleMatrix.filled(blockDim,1,0d);//.combine(0,0,ic).combine(blockDim,0,ic).combine(blockDim*2,0,ic);
 	        }
 };
-	        
+
+private static final BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix> IC =
+//end condition / initial condition  - not a function of t  
+new BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix>() {
+    @Override
+    public SimpleMatrix apply(Pair<ResolvedPolicy,RatesProvider> data, Double t) {
+    	ResolvedPolicy resolvedPolicy = data.getFirst();	
+    	double mr=resolvedPolicy.getMortalityRestitution();
+    	RatesProvider provider = data.getSecond();
+        double gr = resolvedPolicy.getRateInvestementAccountGuaranteed();
+        double dt= 0.25; // a fixed number - does not align with the dt of the ODE
+        int exp = Period.between(provider.getValuationDate(),resolvedPolicy.getExpiryDate()).getYears();
+        int age = Period.between(resolvedPolicy.getBirthDate(),provider.getValuationDate()).getYears();
+        int expM = Period.between(provider.getValuationDate(),resolvedPolicy.getExpiryDate()).getMonths();
+        int valYear = provider.getValuationDate().getYear();
+        double steps = exp + dt*Math.floor(expM/(12*dt));	            
+        double y0= 0;           
+        if (gr!=0){
+            y0=resolvedPolicy.getInvestementAccountProxy();
+            for (double i = 0; i < steps; i=i+dt) {
+                double tar = tar220.zValue(age+i, valYear+i);// Obviously hardcoded- must be derived from policy
+                y0=(tar*(1-mr/100)+gr*(1+tar))*y0*dt +y0;
+            } 
+        }
+        double GK=y0;    
+        SimpleMatrix ic = new SimpleMatrix(blockDim,1,true,DoubleArray.copyOf(vectors.get(0).stream().map(i-> GK + Math.max(0,i-GK)).toArray()).toArray());  
+        return ic;
+    
+    //return SimpleMatrix.filled(blockDim,1,0d);//.combine(0,0,ic).combine(blockDim,0,ic).combine(blockDim*2,0,ic);
+     }
+};
+
+
 private static final BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix> R =
 	    //is state dependent. This case three states  -> three top blocks of R is needed
 	new BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix>() {
@@ -253,14 +303,9 @@ private static final BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, Simp
         	Curve curve = provider.findData(CurveName.of("EUR-CPI")).get();
         	int valYear = provider.getValuationDate().getYear();
         	double inflation = curve.yValue(t)/100;
-        	//SimpleMatrix R = SimpleMatrix.filled(3,3,0d);
         	int age = Period.between(resolvedPolicy.getBirthDate(),provider.getValuationDate()).getYears();
-           
-        	//double qx = qxM.zValue(t+age, valYear+t);
-        	double lapse = lapseM.zValue(age+t, valYear+t)/100;
-        	
+        	double lapse = lapseM.zValue(age+t, valYear+t)/100;      	
              //R
-        	//blockDim=3;
              SimpleMatrix Rm = SimpleMatrix.filled(blockDim, blockDim*3,0d)
              		.combine(0, blockDim*2, SimpleMatrix.diag(vectors.get(0).toArray()).scale(lapse)) 
              		.combine(0, 0, SimpleMatrix.identity(blockDim).scale(costF*inflation));
@@ -272,6 +317,27 @@ private static final BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, Simp
              
         }
 };
+
+private static final BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix> R_F =
+//only active state  
+new BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix>() {
+  @Override
+public SimpleMatrix apply(Pair<ResolvedPolicy,RatesProvider> data, Double t) {
+	  double costF= 16.11;
+  	RatesProvider provider = data.getSecond();
+  	ResolvedPolicy resolvedPolicy = data.getFirst();	
+  	Curve curve = provider.findData(CurveName.of("EUR-CPI")).get();
+  	int valYear = provider.getValuationDate().getYear();
+  	double inflation = curve.yValue(t)/100;
+  	int age = Period.between(resolvedPolicy.getBirthDate(),provider.getValuationDate()).getYears();
+  	double lapse = lapseM.zValue(age+t, valYear+t)/100;
+	return new SimpleMatrix(1,3,true,costF*inflation,0,lapse);
+  	
+	  
+}
+};			        
+
+
 private static final BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix> M =
 	    //is state dependent. This case three states  
 	new BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix>() {
@@ -287,15 +353,41 @@ private static final BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, Simp
         	double portfCorr = pfM.zValue(age+t, valYear+t)/100; 
         	SimpleMatrix LAMBDA = SimpleMatrix.filled(3,3,0d);			        	
         	LAMBDA.set(0,0, -(qx*portfCorr+lapse));// rowsums 0
-        	LAMBDA.set(0,1, lapse);
-            LAMBDA.set(0,2, qx*portfCorr);
+        	//LAMBDA.set(0,1, lapse);// skipped , no returns to state
+            //LAMBDA.set(0,2, qx*portfCorr);
+            
             //SimpleMatrix test = LAMBDA.kron(SimpleMatrix.identity(3));;
             return SimpleMatrix.identity(blockDim).scale(-(qx*portfCorr+lapse));
             
              
         }
 };
-				        
+
+private static final BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix> M_F =
+//is state dependent. This case three states  
+new BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix>() {
+@Override
+public SimpleMatrix apply(Pair<ResolvedPolicy,RatesProvider> data, Double t) {
+
+	RatesProvider provider = data.getSecond();
+	ResolvedPolicy resolvedPolicy = data.getFirst();	
+	int valYear = provider.getValuationDate().getYear();			        
+    int age = Period.between(resolvedPolicy.getBirthDate(),provider.getValuationDate()).getYears();
+	double qx = qxM.zValue(t+age, valYear+t);
+	double lapse = lapseM.zValue(age+t, valYear+t)/100;
+	double portfCorr = pfM.zValue(age+t, valYear+t)/100; 
+	SimpleMatrix LAMBDA = SimpleMatrix.filled(3,3,0d);			        	
+	LAMBDA.set(0,0, -(qx*portfCorr+lapse));// rowsums 0
+	//LAMBDA.set(0,1, lapse);// skipped , no returns to state
+    //LAMBDA.set(0,2, qx*portfCorr);
+    
+    //SimpleMatrix test = LAMBDA.kron(SimpleMatrix.identity(3));;
+    return SimpleMatrix.diag(-(qx*portfCorr+lapse));
+    
+     
+}
+};
+
 private static final BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix> IR =
 	    //only active state  
 	new BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix>() {
@@ -311,7 +403,18 @@ private static final BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, Simp
              
         }
 };			        
-	            
+private static final BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix> IR_F =
+//only active state  
+new BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix>() {
+    @Override
+public SimpleMatrix apply(Pair<ResolvedPolicy,RatesProvider> data, Double t) {
+    	RatesProvider provider = data.getSecond();
+    	Curve fwdCurve = provider.findData(CurveName.of("ESG")).get();
+    	return SimpleMatrix.diag(fwdCurve.yValue(t));
+}
+};			        
+
+
     
 //private static LocalDate VAL_DATE = LocalDate.of(2020, 6, 30);
 private static final BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix> D =
@@ -329,8 +432,6 @@ private static final BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, Simp
 	    	int age = Period.between(resolvedPolicy.getBirthDate(),provider.getValuationDate()).getYears();
 	        int valYear = provider.getValuationDate().getYear();
 	    	double qx = qxM.zValue(t+age, valYear+t);
-	    	double lapse = lapseM.zValue(age+t, valYear+t)/100;
-	    	double portfCorr = pfM.zValue(age+t, valYear+t)/100;
 	    	double tar = tar220.zValue(age+t, valYear+t);
 		    //fund
 	    	SimpleMatrix s3DerivFirstS = firstOrder.get(0);
@@ -364,7 +465,7 @@ private static final BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, Simp
 	           		             
 	        }
   };		
-  private static final BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix> IndF =
+  private static final BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix> Ind =
 		    //only active state  
 		new BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix>() {
 	        @Override
@@ -372,16 +473,25 @@ private static final BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, Simp
 	        	return ind;
 	        }
 	   };
+	   private static final BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix> Zero =
+			    //only active state  
+			new BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix>() {
+		        @Override
+		        public SimpleMatrix apply(Pair<ResolvedPolicy,RatesProvider> data, Double t) {		
+		        	return SimpleMatrix.diag(0d);
+		        }
+		   };
+		  
  //private static ArrayList<BiFunction<ResolvedPolicy, Double, SimpleMatrix>> funcs= new ArrayList<BiFunction<ResolvedPolicy, Double, SimpleMatrix>>()  ;	      
  	
   //private static  schuur(SimpleMatrix D, SimpleMatrix v) {for (int i   D.getNumCols())};
   public static final PolicyConvention UNIT_LINKED =
 		  ImmutablePolicyConvention.of(
-          "UNIT_LINKED", List.of(IC,D,M, R, IR,IRDerivative,IndF)
+          "UNIT_LINKED", List.of(IC,D,M, R, IR,IRDerivative,Ind)
           );
   public static final PolicyConvention UNIT_FIXED =
 		  ImmutablePolicyConvention.of(
-          "UNIT_LINKED", List.of(IC,D,M, R, IR,IRDerivative,IndF)
+          "UNIT_FIXED", List.of(IC_F,Zero,M_F, R_F, IR_F,IRDerivative,Zero)
           );
 
   

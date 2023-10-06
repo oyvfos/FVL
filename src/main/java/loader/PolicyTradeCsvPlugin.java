@@ -125,10 +125,10 @@ final class PolicyTradeCsvPlugin implements TradeCsvParserPlugin {
     .mortalityRestitution(mortalityRestitution)
     .currency(currency)
     .tarifId(tarifId)
-    .calcMethod(StochasticPIDEComputation.of(0))
+    .convention(PolicyConvention.of(convention))
     .build();
-    PolicyConvention conventionP = PolicyConvention.of(convention);    
-    return conventionP.toTrade(info, payment,resolver.getReferenceData());
+    //PolicyConvention conventionP = PolicyConvention.of(convention);    
+    return PolicyTrade.of(info, payment);
   }
 
   //-------------------------------------------------------------------------

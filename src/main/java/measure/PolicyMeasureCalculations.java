@@ -126,8 +126,8 @@ final class PolicyMeasureCalculations {
       RatesScenarioMarketData marketData,
       ReferenceData refData, 
       Object diffMatArray) {
-	  List<Pair<SimpleMatrix, SimpleMatrix>> arr = (List<Pair<SimpleMatrix, SimpleMatrix>>) diffMatArray;  
-    return MultiCurrencyScenarioArray.of(
+	  List<Pair<SimpleMatrix, SimpleMatrix>> arr = (List<Pair<SimpleMatrix, SimpleMatrix>>) diffMatArray;   
+	  return MultiCurrencyScenarioArray.of(
         marketData.getScenarioCount(),
         i -> pv01CalibratedSum(computation,trade, marketData.scenario(i).ratesProvider(), refData, arr.get(i)));
   }

@@ -130,27 +130,27 @@ public final class Policy
   private final String tarifId;
   
   @PropertyDefinition(validate = "notNull")
-  private final PolicyComputation calcMethod;
+  private final PolicyConvention convention;
   
   @Override
-	public ResolvedPolicy resolve(ReferenceData refData) {
-		// TODO Auto-generated method stub
-		return ResolvedPolicy.builder()
-				 .male(male)
-				    .birthDate(birthDate)
-				    .expiryDate(expiryDate)
-				    
-				    .investementAccount(investementAccount)
-				    .investementAccountProxy(investementAccountProxy)
-				    .expenseRateinvestementAccount(expenseRateinvestementAccount)
-				    
-				    .rateInvestementAccountGuaranteed(rateInvestementAccountGuaranteed)
-				    .mortalityRestitution(mortalityRestitution)
-				    .currency(currency)
-				    .tarifId(tarifId)
-				    .calcMethod(calcMethod)
-				    .build();
-	}
+    public ResolvedPolicy resolve(ReferenceData refData) {
+        // TODO Auto-generated method stub
+        return ResolvedPolicy.builder()
+                 .male(male)
+                    .birthDate(birthDate)
+                    .expiryDate(expiryDate)
+                    
+                    .investementAccount(investementAccount)
+                    .investementAccountProxy(investementAccountProxy)
+                    .expenseRateinvestementAccount(expenseRateinvestementAccount)
+                    
+                    .rateInvestementAccountGuaranteed(rateInvestementAccountGuaranteed)
+                    .mortalityRestitution(mortalityRestitution)
+                    .currency(currency)
+                    .tarifId(tarifId)
+                    .convention(convention)
+                    .build();
+    }
 
   /**
    * The payment date.
@@ -198,7 +198,7 @@ public final class Policy
             double mortalityRestitution,
             Currency currency,
             String tarifId,
-            PolicyComputation calcMethod) {
+            PolicyConvention convention) {
         JodaBeanUtils.notNull(male, "male");
         JodaBeanUtils.notNull(birthDate, "birthDate");
         JodaBeanUtils.notNull(expiryDate, "expiryDate");
@@ -209,7 +209,7 @@ public final class Policy
         JodaBeanUtils.notNull(mortalityRestitution, "mortalityRestitution");
         JodaBeanUtils.notNull(currency, "currency");
         JodaBeanUtils.notNull(tarifId, "tarifId");
-        JodaBeanUtils.notNull(calcMethod, "calcMethod");
+        JodaBeanUtils.notNull(convention, "convention");
         this.male = male;
         this.birthDate = birthDate;
         this.expiryDate = expiryDate;
@@ -220,7 +220,7 @@ public final class Policy
         this.mortalityRestitution = mortalityRestitution;
         this.currency = currency;
         this.tarifId = tarifId;
-        this.calcMethod = calcMethod;
+        this.convention = convention;
     }
 
     @Override
@@ -329,11 +329,11 @@ public final class Policy
 
     //-----------------------------------------------------------------------
     /**
-     * Gets the calcMethod.
+     * Gets the convention.
      * @return the value of the property, not null
      */
-    public PolicyComputation getCalcMethod() {
-        return calcMethod;
+    public PolicyConvention getConvention() {
+        return convention;
     }
 
     //-----------------------------------------------------------------------
@@ -362,7 +362,7 @@ public final class Policy
                     JodaBeanUtils.equal(mortalityRestitution, other.mortalityRestitution) &&
                     JodaBeanUtils.equal(currency, other.currency) &&
                     JodaBeanUtils.equal(tarifId, other.tarifId) &&
-                    JodaBeanUtils.equal(calcMethod, other.calcMethod);
+                    JodaBeanUtils.equal(convention, other.convention);
         }
         return false;
     }
@@ -380,7 +380,7 @@ public final class Policy
         hash = hash * 31 + JodaBeanUtils.hashCode(mortalityRestitution);
         hash = hash * 31 + JodaBeanUtils.hashCode(currency);
         hash = hash * 31 + JodaBeanUtils.hashCode(tarifId);
-        hash = hash * 31 + JodaBeanUtils.hashCode(calcMethod);
+        hash = hash * 31 + JodaBeanUtils.hashCode(convention);
         return hash;
     }
 
@@ -398,7 +398,7 @@ public final class Policy
         buf.append("mortalityRestitution").append('=').append(mortalityRestitution).append(',').append(' ');
         buf.append("currency").append('=').append(currency).append(',').append(' ');
         buf.append("tarifId").append('=').append(tarifId).append(',').append(' ');
-        buf.append("calcMethod").append('=').append(JodaBeanUtils.toString(calcMethod));
+        buf.append("convention").append('=').append(JodaBeanUtils.toString(convention));
         buf.append('}');
         return buf.toString();
     }
@@ -464,10 +464,10 @@ public final class Policy
         private final MetaProperty<String> tarifId = DirectMetaProperty.ofImmutable(
                 this, "tarifId", Policy.class, String.class);
         /**
-         * The meta-property for the {@code calcMethod} property.
+         * The meta-property for the {@code convention} property.
          */
-        private final MetaProperty<PolicyComputation> calcMethod = DirectMetaProperty.ofImmutable(
-                this, "calcMethod", Policy.class, PolicyComputation.class);
+        private final MetaProperty<PolicyConvention> convention = DirectMetaProperty.ofImmutable(
+                this, "convention", Policy.class, PolicyConvention.class);
         /**
          * The meta-properties.
          */
@@ -483,7 +483,7 @@ public final class Policy
                 "mortalityRestitution",
                 "currency",
                 "tarifId",
-                "calcMethod");
+                "convention");
 
         /**
          * Restricted constructor.
@@ -514,8 +514,8 @@ public final class Policy
                     return currency;
                 case -1538217923:  // tarifId
                     return tarifId;
-                case 2005361558:  // calcMethod
-                    return calcMethod;
+                case 2039569265:  // convention
+                    return convention;
             }
             return super.metaPropertyGet(propertyName);
         }
@@ -617,11 +617,11 @@ public final class Policy
         }
 
         /**
-         * The meta-property for the {@code calcMethod} property.
+         * The meta-property for the {@code convention} property.
          * @return the meta-property, not null
          */
-        public MetaProperty<PolicyComputation> calcMethod() {
-            return calcMethod;
+        public MetaProperty<PolicyConvention> convention() {
+            return convention;
         }
 
         //-----------------------------------------------------------------------
@@ -648,8 +648,8 @@ public final class Policy
                     return ((Policy) bean).getCurrency();
                 case -1538217923:  // tarifId
                     return ((Policy) bean).getTarifId();
-                case 2005361558:  // calcMethod
-                    return ((Policy) bean).getCalcMethod();
+                case 2039569265:  // convention
+                    return ((Policy) bean).getConvention();
             }
             return super.propertyGet(bean, propertyName, quiet);
         }
@@ -681,7 +681,7 @@ public final class Policy
         private double mortalityRestitution;
         private Currency currency;
         private String tarifId;
-        private PolicyComputation calcMethod;
+        private PolicyConvention convention;
 
         /**
          * Restricted constructor.
@@ -704,7 +704,7 @@ public final class Policy
             this.mortalityRestitution = beanToCopy.getMortalityRestitution();
             this.currency = beanToCopy.getCurrency();
             this.tarifId = beanToCopy.getTarifId();
-            this.calcMethod = beanToCopy.getCalcMethod();
+            this.convention = beanToCopy.getConvention();
         }
 
         //-----------------------------------------------------------------------
@@ -731,8 +731,8 @@ public final class Policy
                     return currency;
                 case -1538217923:  // tarifId
                     return tarifId;
-                case 2005361558:  // calcMethod
-                    return calcMethod;
+                case 2039569265:  // convention
+                    return convention;
                 default:
                     throw new NoSuchElementException("Unknown property: " + propertyName);
             }
@@ -771,8 +771,8 @@ public final class Policy
                 case -1538217923:  // tarifId
                     this.tarifId = (String) newValue;
                     break;
-                case 2005361558:  // calcMethod
-                    this.calcMethod = (PolicyComputation) newValue;
+                case 2039569265:  // convention
+                    this.convention = (PolicyConvention) newValue;
                     break;
                 default:
                     throw new NoSuchElementException("Unknown property: " + propertyName);
@@ -799,7 +799,7 @@ public final class Policy
                     mortalityRestitution,
                     currency,
                     tarifId,
-                    calcMethod);
+                    convention);
         }
 
         //-----------------------------------------------------------------------
@@ -923,13 +923,13 @@ public final class Policy
         }
 
         /**
-         * Sets the calcMethod.
-         * @param calcMethod  the new value, not null
+         * Sets the convention.
+         * @param convention  the new value, not null
          * @return this, for chaining, not null
          */
-        public Builder calcMethod(PolicyComputation calcMethod) {
-            JodaBeanUtils.notNull(calcMethod, "calcMethod");
-            this.calcMethod = calcMethod;
+        public Builder convention(PolicyConvention convention) {
+            JodaBeanUtils.notNull(convention, "convention");
+            this.convention = convention;
             return this;
         }
 
@@ -948,14 +948,13 @@ public final class Policy
             buf.append("mortalityRestitution").append('=').append(JodaBeanUtils.toString(mortalityRestitution)).append(',').append(' ');
             buf.append("currency").append('=').append(JodaBeanUtils.toString(currency)).append(',').append(' ');
             buf.append("tarifId").append('=').append(JodaBeanUtils.toString(tarifId)).append(',').append(' ');
-            buf.append("calcMethod").append('=').append(JodaBeanUtils.toString(calcMethod));
+            buf.append("convention").append('=').append(JodaBeanUtils.toString(convention));
             buf.append('}');
             return buf.toString();
         }
 
     }
 
-	
 	@Override
 	public ImmutableSet<Currency> allCurrencies() {
 		// TODO Auto-generated method stub
