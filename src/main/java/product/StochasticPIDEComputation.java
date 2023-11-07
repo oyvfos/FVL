@@ -85,7 +85,7 @@ implements PolicyComputation, ImmutableBean, Serializable {
 		  int col = solutions.getFirst().getNumCols();
 		  List<BiFunction<Pair<ResolvedPolicy, RatesProvider>, Double, SimpleMatrix>> funcs =  refData
 				  .getValue(DifferentiationMatrixId.of("OG-Ticker", fra.getConvention().getName())).getDifferenationMatrix() ;  
-	      BiFunction<Pair<ResolvedPolicy, RatesProvider>, Double, SimpleMatrix> Indf = funcs.get(5);// fixed place
+	      BiFunction<Pair<ResolvedPolicy, RatesProvider>, Double, SimpleMatrix> Indf = funcs.get(6);// fixed place
 	      int ind = (int)Indf.apply(Pair.of(fra,provider),0d).get(0, 0);
 		  if (col==1) ind=0;
 		  return CurrencyAmount.of(Currency.EUR, solutions.getFirst().cols(col-1,col).get(ind)*-1);		

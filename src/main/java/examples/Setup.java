@@ -273,7 +273,7 @@ public class Setup {
 	  
 	  //actually creates a forward curve from the discount curve - but not used 
 	  Builder<LabelDateParameterMetadata> nodeMetadata = ImmutableList.<LabelDateParameterMetadata>builder();
-//	  Curve discountCurve = multicurve.findData(CurveName.of("EIOPA")).get();
+	  Curve discountCurve = multicurve.findData(CurveName.of("EIOPA")).get();
 	  
 	  double prevDsc=1;
 	  double d=4;
@@ -281,11 +281,11 @@ public class Setup {
 	// StringBuilder sbuilder = new StringBuilder();
 	  for (int i=0; i < 120*d; i++) {
 		  nodeMetadata.add(LabelDateParameterMetadata.of(VAL_DATE.plusMonths(i*3),i+"M"));
-//		  double curDsc=  discountCurve.yValue(i/d);
-//		  dr[i]= 1*(i==0? -Math.log(discountCurve.yValue(1/d)):Math.log(prevDsc / curDsc)*d);
-//		  //sbuilder.append(dr[i]).append(',').append("\n");
-//		  prevDsc = curDsc;
-//		   
+		  double curDsc=  discountCurve.yValue(i/d);
+		  dr[i]= 1*(i==0? -Math.log(discountCurve.yValue(1/d)):Math.log(prevDsc / curDsc)*d);
+		  //sbuilder.append(dr[i]).append(',').append("\n");
+		  prevDsc = curDsc;
+		   
 	  }  
 	  //ExportUtils.export(sbuilder.toString(), "C:\\Users\\9318300\\Documents\\projs\\ALMvalidations\\dscRatesEUR.csv");
 	// Used for monte carlo HW (eq or ir) are forwards- move somewhere else?
@@ -294,8 +294,8 @@ public class Setup {
 	  Curve curveESG = InterpolatedNodalCurve.of(
 		        Curves.forwardRates(CurveName.of("ESG"), DayCounts.ACT_365F, nodeMetadata.build()),
 		        DoubleArray.copyOf(IntStream.range(0, 120*(int)d).mapToDouble(i->(i/d)).toArray()),
-		        //DoubleArray.copyOf(dr),
-		        DoubleArray.filled(dr.length,0d),// zeros - actual curves from MC build shifts 
+		        DoubleArray.copyOf(dr),
+		        //DoubleArray.filled(dr.length,0d),// zeros - actual curves from MC build shifts 
 		        INTERPOLATOR);
 	  
 	  Curve curveEQ = InterpolatedNodalCurve.of(
