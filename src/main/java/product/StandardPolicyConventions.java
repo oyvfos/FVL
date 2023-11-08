@@ -63,9 +63,9 @@ public final class StandardPolicyConventions {
    * USD(NY) vanilla fixed vs LIBOR 3M swap.
    * The fixed leg pays every 6 months with day count '30U/360'.
    */
-  //static List<Pair<Integer, Integer>> ranges= List.of(Pair.of(-2, 3),Pair.of(-2, 3),Pair.of(-2, 3));
-  static List<Pair<Integer, Integer>> ranges= List.of(Pair.of(-2, 3),Pair.of(0, 0),Pair.of(0, 0));
-  static List<Double> stepsizes= List.of(0.1,.01,.05);
+  static List<Pair<Integer, Integer>> ranges= List.of(Pair.of(-2, 3),Pair.of(-2, 3),Pair.of(-2, 3));
+  //static List<Pair<Integer, Integer>> ranges= List.of(Pair.of(-2, 3),Pair.of(0, 1),Pair.of(0, 1));
+  static List<Double> stepsizes= List.of(0.5,.01,.05);
   static List<Double> shift= List.of(1d,0d,0d);
   //static List<BiFunction<Double, SimpleMatrix,SimpleMatrix>> mu=new ArrayList<BiFunction<Double,SimpleMatrix,SimpleMatrix>>();
   //static List<BiFunction<Double, SimpleMatrix,SimpleMatrix>> B=new ArrayList<BiFunction<Double,SimpleMatrix,SimpleMatrix>>();
@@ -90,8 +90,8 @@ public final class StandardPolicyConventions {
 //     double stepsizes2=0.01;//rente  
 //     double stepsizes3=0.05;//eq 
 //    
-     double s1= 5*s0;
-     double b1= .5d*b0;
+     double s1= 10*s0;
+     double b1= b0;
      
      List<List<Double>> s;
      List<Double> sd;
@@ -305,6 +305,7 @@ new BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix>() {
 
 private static final BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix> R =
 	    //is state dependent. This case three states  -> three top blocks of R is needed
+
 	new BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix>() {
         @Override
         public SimpleMatrix apply(Pair<ResolvedPolicy,RatesProvider> data, Double t) {
@@ -320,7 +321,7 @@ private static final BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, Simp
         	double lapse = lapseM.zValue(age+t, valYear+t)/100;      	
              //R
              SimpleMatrix Rm = SimpleMatrix.filled(blockDim, blockDim*3,0d)
-             		.combine(0, blockDim*2, SimpleMatrix.diag(vectors.get(0).toArray()).scale(lapse).scale(accVal)) 
+             		.combine(0, blockDim*2, SimpleMatrix.diag(vectors.get(0).toArray()).scale(-lapse).scale(accVal)) 
              		.combine(0, 0, SimpleMatrix.identity(blockDim).scale(costF*inflation));
              		//.combine(blockDim, blockDim, SimpleMatrix.identity(blockDim).scale(costF*inflation))
              		//.combine(blockDim*2, blockDim*2, SimpleMatrix.identity(blockDim).scale(costF*inflation));
@@ -364,7 +365,7 @@ private static final BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, Simp
         	double qx = qxM.zValue(t+age, valYear+t);
         	double lapse = lapseM.zValue(age+t, valYear+t)/100;
         	double portfCorr = pfM.zValue(age+t, valYear+t)/100; 
-        	SimpleMatrix LAMBDA = SimpleMatrix.filled(3,3,0d);			        	
+        	//SimpleMatrix LAMBDA = SimpleMatrix.filled(3,3,0d);			        	
         	//LAMBDA.set(0,0, -(qx*portfCorr+lapse));// rowsums 0
         	//LAMBDA.set(0,1, lapse);// skipped , no returns to state
             //LAMBDA.set(0,2, qx*portfCorr);
@@ -439,20 +440,21 @@ new BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix>() {
   	RatesProvider provider = data.getSecond();
       double terbeh = resolvedPolicy.getExpenseRateinvestementAccount();
       double accVal= resolvedPolicy.getInvestementAccount();
-     
+      Curve fwdCurve = provider.findData(CurveName.of("ESG")).get();
+      double fwd1= fwdCurve.yValue(t);
       double scaleVal=1d/accVal;
   	int age = Period.between(resolvedPolicy.getBirthDate(),provider.getValuationDate()).getYears();
       int valYear = provider.getValuationDate().getYear();
   	double qx = qxM.zValue(t+age, valYear+t);
   	double tar = tar220.zValue(age+t, valYear+t);
 	    //fund
-  	SimpleMatrix s3DerivFirstS = firstOrder.get(0);
-  	List<double[]> cop = Collections.nCopies(blockDim, vectors.get(0).multipliedBy(vectors.get(1).plus(vectors.get(2)).dividedBy(2).plus(-terbeh -tar*qx )).toArray());
+  	SimpleMatrix s3DerivFirstS = firstOrder.get(0).scale(scaleVal);
+  	List<double[]> cop = Collections.nCopies(blockDim, vectors.get(0).multipliedBy(accVal).multipliedBy(-terbeh -tar*qx + fwd1).toArray());
   	double[] vals = cop.stream().flatMapToDouble(x -> Arrays.stream(x)).toArray();
   	SimpleMatrix sm1 = new SimpleMatrix(blockDim, blockDim, false, vals);
   	SimpleMatrix fundD=s3DerivFirstS.elementMult(sm1);
 	 // only fund 
-  	SimpleMatrix Dt = fundD.scale(scaleVal);
+  	SimpleMatrix Dt = fundD;
   	return Dt;
 //        return SimpleMatrix.filled(blockDim*3, blockDim*3,0d).combine(0, 0, Dt).
 //          		 combine(blockDim, blockDim, Dt).combine(blockDim*2, blockDim*2, Dt);
@@ -462,7 +464,7 @@ new BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix>() {
 private static final BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix> D =
       new BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix>() {
         // all differentiation matrices, deliberately dimension equal to one state, as separate D functions  per state may be required 
-
+		int i=5;
         @Override
         public SimpleMatrix apply(Pair<ResolvedPolicy,RatesProvider> data, Double t) {
         	ResolvedPolicy resolvedPolicy = data.getFirst();
@@ -476,30 +478,44 @@ private static final BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, Simp
 	    	double qx = qxM.zValue(t+age, valYear+t);
 	    	double tar = tar220.zValue(age+t, valYear+t);
 		    //fund
-	    	SimpleMatrix s3DerivFirstS = firstOrder.get(0);
-	    	List<double[]> cop = Collections.nCopies(blockDim, vectors.get(0).multipliedBy(vectors.get(1).plus(vectors.get(2)).dividedBy(2).plus(-terbeh -tar*qx )).toArray());
+	    	SimpleMatrix s3DerivFirstS = firstOrder.get(0).scale(scaleVal);
+	    	List<double[]> cop = Collections.nCopies(blockDim, vectors.get(0).multipliedBy(accVal).multipliedBy(vectors.get(1).plus(vectors.get(2)).dividedBy(2).plus(-terbeh -tar*qx )).toArray());
 	    	double[] vals = cop.stream().flatMapToDouble(x -> Arrays.stream(x)).toArray();
 	    	SimpleMatrix sm1 = new SimpleMatrix(blockDim, blockDim, false, vals);
 	    	SimpleMatrix fundD=s3DerivFirstS.elementMult(sm1);
 		 
-	    	SimpleMatrix Dt = fundD.scale(scaleVal).plus(firstOrder.get(1)).plus(firstOrder.get(2)).plus(secondOrder.get(0)).plus(secondOrder.get(1));
+	    	SimpleMatrix Dt = fundD.plus(firstOrder.get(1)).plus(firstOrder.get(2)).plus(secondOrder.get(0)).plus(secondOrder.get(1));
 	    	return Dt;
 //	          return SimpleMatrix.filled(blockDim*3, blockDim*3,0d).combine(0, 0, Dt).
 //	            		 combine(blockDim, blockDim, Dt).combine(blockDim*2, blockDim*2, Dt);
         }
   };
-  private static final BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix> IRDerivative =
+  private static final BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix> Derivative =
 		    //only active state  
 		new BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix>() {
 	        @Override
         public SimpleMatrix apply(Pair<ResolvedPolicy,RatesProvider> data, Double t) {
         	//derivate with respect to perturbation p
-			 SimpleMatrix s3DerivFirstS = firstOrder.get(0);
-			 List<double[]> cop = Collections.nCopies(blockDim, vectors.get(0).toArray());
-			 double[] vals = cop.stream().flatMapToDouble(x -> Arrays.stream(x)).toArray();
-			 SimpleMatrix sm1 = new SimpleMatrix(blockDim, blockDim, false, vals);
-			 SimpleMatrix fDer=s3DerivFirstS.elementMult(sm1);
-			 return fDer;
+	        	ResolvedPolicy resolvedPolicy = data.getFirst();
+	        	RatesProvider provider = data.getSecond();
+		        double terbeh = resolvedPolicy.getExpenseRateinvestementAccount();
+		        double accVal= resolvedPolicy.getInvestementAccount();
+		       
+		        double scaleVal=1d/accVal;
+		    	int age = Period.between(resolvedPolicy.getBirthDate(),provider.getValuationDate()).getYears();
+		        int valYear = provider.getValuationDate().getYear();
+		    	double qx = qxM.zValue(t+age, valYear+t);
+		    	double tar = tar220.zValue(age+t, valYear+t);
+			    //fund
+		    	SimpleMatrix s3DerivFirstS = firstOrder.get(0).scale(scaleVal);
+		    	List<double[]> cop = Collections.nCopies(blockDim, vectors.get(0).toArray());
+		    	double[] vals = cop.stream().flatMapToDouble(x -> Arrays.stream(x)).toArray();
+		    	SimpleMatrix sm1 = new SimpleMatrix(blockDim, blockDim, false, vals);
+		    	SimpleMatrix der=s3DerivFirstS.elementMult(sm1);
+			 
+		    	SimpleMatrix Der = der.minus(SimpleMatrix.identity(blockDim));
+		    	
+			 return Der;
 //			        	 return SimpleMatrix.filled(blockDim*3,blockDim*3,0d)
 //				        		 .combine(0, 0, SimpleMatrix.diag(vectors.get(1).toArray()))
 //				        		.combine(blockDim, blockDim, SimpleMatrix.diag(vectors.get(1).toArray()))
@@ -530,11 +546,11 @@ private static final BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, Simp
   //private static  schuur(SimpleMatrix D, SimpleMatrix v) {for (int i   D.getNumCols())};
   public static final PolicyConvention UNIT_LINKED =
 		  ImmutablePolicyConvention.of(
-          "UNIT_LINKED", List.of(IC,D,M, R, IR,IRDerivative,Ind)
+          "UNIT_LINKED", List.of(IC,D,M, R, IR,Derivative,Ind)
           );
   public static final PolicyConvention UNIT_FIXED =
 		  ImmutablePolicyConvention.of(
-          "UNIT_FIXED", List.of(IC,D_F,M, R, IR_F,IRDerivative,Ind)
+          "UNIT_FIXED", List.of(IC,D_F,M, R, IR_F,Derivative,Ind)
           );
 
   

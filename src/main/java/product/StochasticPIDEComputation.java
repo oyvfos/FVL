@@ -95,14 +95,15 @@ implements PolicyComputation, ImmutableBean, Serializable {
       if (diffMat.getSecond().getNumRows()==1) return PointSensitivityBuilder.none();
       List<BiFunction<Pair<ResolvedPolicy, RatesProvider>, Double, SimpleMatrix>> funcs =  refData
     		  .getValue(DifferentiationMatrixId.of("OG-Ticker", resolvedPolicy.getConvention().getName())).getDifferenationMatrix() ;  
-      BiFunction<Pair<ResolvedPolicy, RatesProvider>, Double, SimpleMatrix> IRDerf = funcs.get(5);// fixed place
+      BiFunction<Pair<ResolvedPolicy, RatesProvider>, Double, SimpleMatrix> Der = funcs.get(5);// fixed place
       List<Double> l= new ArrayList<Double>();
       List<IborRateSensitivity> ps=Lists.newArrayList();
       double prevTmp=0;
       double tmp=0;
       int totalSteps= diffMat.getSecond().getNumCols() ;
-      SimpleMatrix fwdDer= IRDerf.apply(Pair.of(resolvedPolicy,provider),0d);
+      //SimpleMatrix fwdDer= Der.apply(Pair.of(resolvedPolicy,provider),0d);
       for (int i = 0; i < (totalSteps-1); i++) {
+    	  SimpleMatrix fwdDer= Der.apply(Pair.of(resolvedPolicy,provider),(double)i);
           prevTmp=tmp;
           tmp = diffMat.getSecond().cols(totalSteps-i-2, totalSteps-i-1).transpose().mult(fwdDer).mult(diffMat.getFirst().cols(i, i+1)).get(0,0);//*(-i/(Math.log(discountFactors.discountFactor(i+1))));
           l.add(tmp);
@@ -138,31 +139,36 @@ implements PolicyComputation, ImmutableBean, Serializable {
          SimpleMatrix yS = endCond;
          SimpleMatrix fullY=yS;//yS         
          SimpleMatrix fullYadj=ySAdj;        
-         SimpleMatrix IR = IRf.apply(Pair.of(resolvedPolicy,provider),0d);       
+         long start1 = System.currentTimeMillis();   
          for (double i = (steps-dt); i > -dt; i=i-dt) {
              double t=i;
              double t1=steps-t; 
-             long start1 = System.currentTimeMillis();
+            
+             SimpleMatrix IR = IRf.apply(Pair.of(resolvedPolicy,provider),i); 
              SimpleMatrix D = Df.apply(Pair.of(resolvedPolicy,provider),i);
-             long end = System.currentTimeMillis();
+             //long end = System.currentTimeMillis();
              SimpleMatrix R = Rf.apply(Pair.of(resolvedPolicy,provider),i);
              SimpleMatrix M = Mf.apply(Pair.of(resolvedPolicy,provider),i);
-             SimpleMatrix fR = Rf.apply(Pair.of(resolvedPolicy,provider),t1);
+             //SimpleMatrix fR = Rf.apply(Pair.of(resolvedPolicy,provider),t1);
              SimpleMatrix fM = Mf.apply(Pair.of(resolvedPolicy,provider),t1);
+             SimpleMatrix fIR = IRf.apply(Pair.of(resolvedPolicy,provider),t1);
              //long end = System.currentTimeMillis();
              //System.out.println((end-start1) + " msec");
              
              SimpleMatrix Id = SimpleMatrix.identity(blockDim);
              SimpleMatrix Ones =SimpleMatrix.ones(R.getNumCols(),1);
              
-             SimpleMatrix y1=IR.minus(M).minus(D).scale(dt).plus(Id).mult(yS).minus(R.mult(Ones).scale(dt));
-             SimpleMatrix y1Adj = IR.minus(fM).minus(D).scale(dt).plus(Id).mult(ySAdj).minus(fR.mult(Ones).scale(dt));
+             SimpleMatrix y1=IR.minus(M).minus(D).scale(dt).minus(Id).mult(yS).minus(R.mult(Ones).scale(dt));
+             SimpleMatrix y1Adj = fIR.minus(fM).minus(D).scale(dt).transpose().minus(Id).mult(ySAdj);
+             //SimpleMatrix y1Adj =ySAdj;
              yS=y1.scale(-1);
              ySAdj=y1Adj.scale(-1);
              fullYadj=fullYadj.concatColumns(y1Adj);
-             fullY=fullY.concatColumns(y1)    ;
-        
+             fullY=fullY.concatColumns(y1);
+             
          }
+         long end = System.currentTimeMillis();
+         System.out.println((end-start1) + " msec");
          return Pair.of(fullY,fullYadj);
          
   }
