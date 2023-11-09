@@ -138,8 +138,7 @@ public class Setup {
 	private static LocalDate VAL_DATE = LocalDate.of(2020, 6, 30);
 	private static final TradeCsvLoader standard = TradeCsvLoader.standard();
 
-	//	private static final DiscountingSwapProductPricer SWAP_PRICER =
-	//		      DiscountingSwapProductPricer.DEFAULT;
+	
 	private static final RatesCurveCalibrator CALIBRATOR = RatesCurveCalibrator.of(1e-9, 1e-9, 100);
 
 	static List<Trade> totTrades = standard.load(ResourceLocator.of("classpath:trades/ALMall.csv")).getValue();

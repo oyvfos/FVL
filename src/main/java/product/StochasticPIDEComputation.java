@@ -151,9 +151,9 @@ implements PolicyComputation, ImmutableBean, Serializable {
 		  SimpleMatrix fM = Mf.apply(Pair.of(resolvedPolicy,provider),t1);
 		  SimpleMatrix fIR = IRf.apply(Pair.of(resolvedPolicy,provider),t1);
 		  SimpleMatrix Id = SimpleMatrix.identity(blockDim);
-		  SimpleMatrix Ones =SimpleMatrix.ones(R.getNumCols(),1);
+		  //SimpleMatrix Ones =SimpleMatrix.ones(R.getNumCols(),1);
 
-		  SimpleMatrix y1=IR.minus(M).minus(D).scale(dt).minus(Id).mult(yS).minus(R.mult(Ones).scale(dt));
+		  SimpleMatrix y1=IR.minus(M).minus(D).scale(dt).minus(Id).mult(yS).minus(R.scale(dt));// actually R.mult(Ones).
 		  SimpleMatrix y1Adj = fIR.minus(fM).minus(D).scale(dt).transpose().minus(Id).mult(ySAdj);
 		  //SimpleMatrix y1Adj =ySAdj;
 		  yS=y1.scale(-1);
