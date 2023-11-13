@@ -293,8 +293,8 @@ public class Setup {
 		Curve curveESG = InterpolatedNodalCurve.of(
 				Curves.forwardRates(CurveName.of("ESG"), DayCounts.ACT_365F, nodeMetadata.build()),
 				DoubleArray.copyOf(IntStream.range(0, 120*(int)d).mapToDouble(i->(i/d)).toArray()),
-				DoubleArray.copyOf(dr),
-				//DoubleArray.filled(dr.length,0d),// zeros - actual curves from MC build shifts 
+				//DoubleArray.copyOf(dr),
+				DoubleArray.filled(dr.length,0d),// zeros - actual curves from MC build shifts 
 				INTERPOLATOR);
 
 		Curve curveEQ = InterpolatedNodalCurve.of(
@@ -307,54 +307,58 @@ public class Setup {
 		builder11.addValue(CurveId.of(GROUP_NAME, CurveName.of("Equity")), curveEQ);
 
 		builder11.addValue(NonObservableId.of("TimeStep"), new Double(.25d)).addValue(NonObservableId.of("BasisPointShift"), new Double(0d));
+		// Various perturbations for additional sensitivities   
 		ScenarioMarketData MARKET_DATA1 = ScenarioMarketData.of(
 				1,
 				data1.combinedWith(builder11.build()));
-		PerturbationMapping<Curve> mapping = PerturbationMapping.of(
-				MarketDataFilter.ofName(CurveName.of("ESG")),
-				CurveParallelShifts.absolute(0,0.0001,0,0.0001,0,0.0001)
-				);
-		PerturbationMapping<Curve> mapping_deb = PerturbationMapping.of(
-				MarketDataFilter.ofName(CurveName.of("ESG")),
-				CurveParallelShifts.absolute(0,0.0001)
-				);
+		
+//		PerturbationMapping<Curve> mapping = PerturbationMapping.of(
+//				MarketDataFilter.ofName(CurveName.of("ESG")),
+//				CurveParallelShifts.absolute(0,0.0001,0,0.0001,0,0.0001)
+//				);
+//		PerturbationMapping<Curve> mapping_deb = PerturbationMapping.of(
+//				MarketDataFilter.ofName(CurveName.of("ESG")),
+//				CurveParallelShifts.absolute(0,0.0001)
+//				);
 
-		// Various perturbations for additional sensitivities   
+		
 		//NonObservableId id = new NonObservableId("TimeStep");
 		NonObservableId id1 = NonObservableId.of("TimeStep");
-		PerturbationMapping<Double> mappingPar= PerturbationMapping.of(
-				MarketDataFilter.ofId(NonObservableId.of("TimeStep")),
-				new AbsoluteDoubleShift(0,0,.25,.25,.75,.75));
-		//new AbsoluteDoubleShift(0,.25,.75));
+//		PerturbationMapping<Double> mappingPar= PerturbationMapping.of(
+//				MarketDataFilter.ofId(NonObservableId.of("TimeStep")),
+//				new AbsoluteDoubleShift(0,0,.25,.25,.75,.75));
+//		//new AbsoluteDoubleShift(0,.25,.75));
 		NonObservableId bp = NonObservableId.of("BasisPointShift");
-		PerturbationMapping<Double> mapping_bp= PerturbationMapping.of(
-				new ExactIdFilter<>(bp),
-				new AbsoluteDoubleShift(0,0.0001,0,0.0001,0,0.0001));
-		//new AbsoluteDoubleShift(0,.25,.75));
-		PerturbationMapping<Double> mapping_bpD= PerturbationMapping.of(
-				MarketDataFilter.ofId(NonObservableId.of("BasisPointShift")),
-				new AbsoluteDoubleShift(0,0,0));
-		//new AbsoluteDoubleShift(0,.25,.75));
-		PointShiftsBuilder  builderP = PointShifts.builder(ShiftType.ABSOLUTE);
-		List<ParameterMetadata> curveNodeMetadata = curveESG.getMetadata().getParameterMetadata().get();
-		builderP.addShift(0, curveNodeMetadata.get(0).getIdentifier(), 0.000);//scenario 0 - first node is known  
-		for (int i=0; i < 120*d; i++) {
-			builderP.addShift(i+1, curveNodeMetadata.get(i).getIdentifier(), 0.0001);
-		}
-		PerturbationMapping<ParameterizedData> mappingPS = PerturbationMapping.of(
+//		PerturbationMapping<Double> mapping_bp= PerturbationMapping.of(
+//				new ExactIdFilter<>(bp),
+//				new AbsoluteDoubleShift(0,0.0001,0,0.0001,0,0.0001));
+//		//new AbsoluteDoubleShift(0,.25,.75));
+//		PerturbationMapping<Double> mapping_bpD= PerturbationMapping.of(
+//				MarketDataFilter.ofId(NonObservableId.of("BasisPointShift")),
+//				new AbsoluteDoubleShift(0,0,0));
+//		//new AbsoluteDoubleShift(0,.25,.75));
+//		PointShiftsBuilder  builderP = PointShifts.builder(ShiftType.ABSOLUTE);
+//		List<ParameterMetadata> curveNodeMetadata = curveESG.getMetadata().getParameterMetadata().get();
+//		builderP.addShift(0, curveNodeMetadata.get(0).getIdentifier(), 0.000);//scenario 0 - first node is known  
+//		for (int i=0; i < 120*d; i++) {
+//			builderP.addShift(i+1, curveNodeMetadata.get(i).getIdentifier(), 0.0001);
+//		}
+//		PerturbationMapping<ParameterizedData> mappingPS = PerturbationMapping.of(
+//				MarketDataFilter.ofName(CurveName.of("ESG")),
+//				builderP.build()
+//				);
+
+		// Monte carlo scarios
+		PerturbationMapping<ParameterizedData> mapping2 = PerturbationMapping.of(
 				MarketDataFilter.ofName(CurveName.of("ESG")),
-				builderP.build()
-				);
-		//	PerturbationMapping<ParameterizedData> mapping2 = PerturbationMapping.of(
-		//	  MarketDataFilter.ofName(CurveName.of("ESG")),
-		//    // no shift for the base scenario, 1bp absolute shift to calibrated curves (zeros)
-		//    buildShifts(curveESG,1));
-		//	PerturbationMapping<ParameterizedData> mapping3 = PerturbationMapping.of(
-		//    MarketDataFilter.ofName(CurveName.of("Equity")),
-		//    // no shift for the base scenario, 1bp absolute shift to calibrated curves (zeros)
-		//    buildShifts(curveEQ,5));
-		//    //ScenarioDefinition scenarioDefinition = ScenarioDefinition.ofMappings(mapping2, mapping3); 
-		ScenarioDefinition scenarioDefinition = ScenarioDefinition.empty();
+				// no shift for the base scenario, 1bp absolute shift to calibrated curves (forwards)
+				buildShifts(curveESG,1,curveESG));
+		PerturbationMapping<ParameterizedData> mapping3 = PerturbationMapping.of(
+				MarketDataFilter.ofName(CurveName.of("Equity")),
+				// no shift for the base scenario, 1bp absolute shift to calibrated curves (forwards)
+				buildShifts(curveEQ,5,curveESG));
+		ScenarioDefinition scenarioDefinition = ScenarioDefinition.ofMappings(mapping2, mapping3); 
+//		ScenarioDefinition scenarioDefinition = ScenarioDefinition.empty();
 
 
 
@@ -391,7 +395,7 @@ public class Setup {
 
 		//		}
 	}
-	private static PointShifts buildShifts(Curve basisCurve,double k) {
+	private static PointShifts buildShifts(Curve basisCurve,double k, Curve curve) {
 		PointShiftsBuilder  builder = PointShifts.builder(ShiftType.ABSOLUTE);
 		//CsvFile csv = CsvFile.of(resource.getCharSource(), false);
 		//Map<CurveName, List<CurveNode>> allNodes = new HashMap<>();
@@ -408,12 +412,10 @@ public class Setup {
 
 		HWAnalytical HW = new HWAnalytical(a0,b0,s0);
 		List<ParameterMetadata> curveNodeMetadata = basisCurve.getMetadata().getParameterMetadata().get();
-		for (int  i= 0;i<10000;i++) { //column iterations		
+		for (int  i= 0;i<1000;i++) { //column iterations		
 			double[] out = ou.generatePath();
 			for (int curveNodeIdx = 0; curveNodeIdx<out.length ; curveNodeIdx++) {
-
-				//double shift = Double.parseDouble(out[curveNodeIdxCSV]);
-				builder.addShift(i, curveNodeMetadata.get(curveNodeIdx).getIdentifier(), out[curveNodeIdx]);
+				builder.addShift(i, curveNodeMetadata.get(curveNodeIdx).getIdentifier(), out[curveNodeIdx]-0*curve.yValue(curveNodeIdx));
 
 			}
 		}

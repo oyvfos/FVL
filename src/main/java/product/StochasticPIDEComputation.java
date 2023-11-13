@@ -130,8 +130,9 @@ implements PolicyComputation, ImmutableBean, Serializable {
 	  int exp = Period.between(provider.getValuationDate(),resolvedPolicy.getExpiryDate()).getYears();
 	  int expM = Period.between(provider.getValuationDate(),resolvedPolicy.getExpiryDate()).getMonths(); 
 	  double dt = provider.data(NonObservableId.of("TimeStep"));
-	  double steps = exp + dt*Math.floor(expM/(12*dt));
-	  if (steps==0) return Pair.of(SimpleMatrix.diag(0),SimpleMatrix.diag(0));
+	  double duration = exp + dt*Math.floor(expM/(12*dt));
+	  // return if steps = 0
+	  if (duration==0) return Pair.of(SimpleMatrix.diag(0),SimpleMatrix.diag(0));
 	  SimpleMatrix endCond=IC.apply(Pair.of(resolvedPolicy,provider),0.0);
 	  int blockDim = endCond.getNumRows();
 	  SimpleMatrix ySAdj = new SimpleMatrix(blockDim,1);
@@ -140,9 +141,9 @@ implements PolicyComputation, ImmutableBean, Serializable {
 	  SimpleMatrix fullY=yS;//yS         
 	  SimpleMatrix fullYadj=ySAdj;        
 	  long start1 = System.currentTimeMillis();   
-	  for (double i = (steps-dt); i > -dt; i=i-dt) {
+	  for (double i = (duration-dt); i > -dt; i=i-dt) {
 		  double t=i;
-		  double t1=steps-t; 
+		  double t1=duration-t; 
 
 		  SimpleMatrix IR = IRf.apply(Pair.of(resolvedPolicy,provider),i); 
 		  SimpleMatrix D = Df.apply(Pair.of(resolvedPolicy,provider),i);
@@ -163,7 +164,7 @@ implements PolicyComputation, ImmutableBean, Serializable {
              
          }
          long end = System.currentTimeMillis();
-         System.out.println((end-start1) + " msec");
+         //System.out.println((end-start1) + " msec");
          return Pair.of(fullY,fullYadj);
          
   }

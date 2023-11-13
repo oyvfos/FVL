@@ -39,9 +39,9 @@ import com.opengamma.strata.pricer.swaption.SwaptionSurfaceExpiryTenorParameterM
 import utilities.Taylor;
 
 public class UnitLInkedPolicyConvention {
-	static List<Pair<Integer, Integer>> ranges= List.of(Pair.of(-2, 3),Pair.of(-2, 3),Pair.of(-2, 3));
+	static List<Pair<Integer, Integer>> ranges= List.of(Pair.of(-2, 8),Pair.of(-2, 3),Pair.of(-2, 3));
 	//static List<Pair<Integer, Integer>> ranges= List.of(Pair.of(-2, 3),Pair.of(0, 1),Pair.of(0, 1));
-	static List<Double> stepsizes= List.of(0.5,.01,.05);
+	static List<Double> stepsizes= List.of(1d,.01,.05);
 	static List<Double> shift= List.of(1d,0d,0d);
 	//static List<BiFunction<Double, SimpleMatrix,SimpleMatrix>> mu=new ArrayList<BiFunction<Double,SimpleMatrix,SimpleMatrix>>();
 	//static List<BiFunction<Double, SimpleMatrix,SimpleMatrix>> B=new ArrayList<BiFunction<Double,SimpleMatrix,SimpleMatrix>>();
@@ -62,12 +62,9 @@ public class UnitLInkedPolicyConvention {
 		double a0=0.001258720889208218;
 		double b0=0.00013;
 		double s0=0.00349;
-		//     double stepsize1=.25d;//fonds
-		//     double stepsizes2=0.01;//rente  
-		//     double stepsizes3=0.05;//eq 
-		//    
-		double s1= 10*s0;
-		double b1= b0;
+		int k=5;
+		double s1= k*s0;
+		double b1= k*b0*.1;
 
 		List<List<Double>> s;
 		List<Double> sd;
@@ -151,52 +148,7 @@ public class UnitLInkedPolicyConvention {
 
 	}
 	// static ReferenceData REF_DATA = ReferenceData.standard(); 
-	public static Surface addRefDatafromCSV(String csv, String name) {
-
-		CsvIterator mortalityrates= CsvIterator.of(ResourceLocator.of("classpath:referenceData/" + csv).getCharSource(), true);
-		ArrayList<Integer> AGE = new ArrayList<Integer>();
-		ArrayList<Integer> YEAR =new ArrayList<Integer>();
-		ArrayList<Double> RATE = new ArrayList<Double>();;
-		for (CsvRow row : mortalityrates.asIterable()) {
-			//Currency  cur= row.getValue(CURRENCY_FIELD, LoaderUtils::parseCurrency);
-			YEAR.add(row.getValue("YEAR", LoaderUtils::parseInteger));
-			AGE.add(row.getValue("AGE",LoaderUtils::parseInteger));
-			RATE.add(row.getValue("rate",LoaderUtils::parseDouble));
-		}
-
-		final SurfaceInterpolator INTERPOLATOR_2D = GridSurfaceInterpolator.of(LINEAR, LINEAR);
-
-		final List<ParameterMetadata> PARAMETER_METADATA =
-				MapStream.zip(AGE.stream(), YEAR.stream())
-				.map(SwaptionSurfaceExpiryTenorParameterMetadata::of)
-				.collect(toList());
-		final SurfaceMetadata METADATA =
-				Surfaces.normalVolatilityByExpiryTenor(name, ACT_365F);
-
-		final Surface SURFACE_STD = InterpolatedNodalSurface.of(
-				METADATA.withParameterMetadata(PARAMETER_METADATA),
-				DoubleArray.copyOf(AGE.stream().mapToDouble(num -> (double)num).toArray()),
-				DoubleArray.copyOf(YEAR.stream().mapToDouble(num -> (double)num).toArray()),	
-				DoubleArray.copyOf(RATE.stream() //we start with a stream of objects Stream<int[]>
-						.flatMapToDouble(DoubleStream::of) //we I'll map each int[] to IntStream
-						.toArray()),
-				INTERPOLATOR_2D);
-
-		return SURFACE_STD;
-
-	}
-
-
-	static Surface qxM = addRefDatafromCSV("AG2018_man.csv","AAG-man");
-	static Surface qxF = addRefDatafromCSV("AG2018_vrouw.csv","AAG-vrouw");
-	static Surface pfM = addRefDatafromCSV("PORT_STERFTE_MAN_2019.csv","portf-man");
-	static Surface pfF = addRefDatafromCSV("PORT_STERFTE_VRW_2019.csv","portf-vrouw");
-	static Surface tar207 = addRefDatafromCSV("ZL1001SN.csv","207");
-	static Surface tar220=	 addRefDatafromCSV("PREMTAB21POSNEG.csv","220");
-	static Surface tar221	=addRefDatafromCSV("PREMTAB32NEG.csv","221");
-	static Surface lapseM = addRefDatafromCSV("VERVAL_UL_2019M.csv","verv-man");
-	static Surface lapseF = addRefDatafromCSV("VERVAL_UL_2019V.csv","verv-vrouw");
-
+	
 
 
 	 static final BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix> IC =
@@ -207,6 +159,7 @@ public class UnitLInkedPolicyConvention {
 			ResolvedPolicy resolvedPolicy = data.getFirst();	
 			double mr=resolvedPolicy.getMortalityRestitution();
 			RatesProvider provider = data.getSecond();
+			double accVal= resolvedPolicy.getInvestementAccount();
 			double gr = resolvedPolicy.getRateInvestementAccountGuaranteed();
 			double dt= 0.25; // a fixed number - does not align with the dt of the ODE
 			int exp = Period.between(provider.getValuationDate(),resolvedPolicy.getExpiryDate()).getYears();
@@ -223,7 +176,7 @@ public class UnitLInkedPolicyConvention {
 				} 
 			}
 			double GK=y0;    
-			SimpleMatrix ic = new SimpleMatrix(blockDim,1,true,DoubleArray.copyOf(vectors.get(0).stream().map(i-> GK + Math.max(0,i-GK)).toArray()).toArray());  
+			SimpleMatrix ic = new SimpleMatrix(blockDim,1,true,DoubleArray.copyOf(vectors.get(0).stream().map(i-> GK + Math.max(0,i*accVal-GK)).toArray()).toArray());  
 			return ic;
 
 			//return SimpleMatrix.filled(blockDim,1,0d);//.combine(0,0,ic).combine(blockDim,0,ic).combine(blockDim*2,0,ic);
@@ -263,24 +216,7 @@ public class UnitLInkedPolicyConvention {
 		}
 	};
 
-	 static final BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix> R_F =
-			//only active state  
-			new BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix>() {
-		@Override
-		public SimpleMatrix apply(Pair<ResolvedPolicy,RatesProvider> data, Double t) {
-			double costF= 16.11;
-			RatesProvider provider = data.getSecond();
-			ResolvedPolicy resolvedPolicy = data.getFirst();	
-			Curve curve = provider.findData(CurveName.of("EUR-CPI")).get();
-			int valYear = provider.getValuationDate().getYear();
-			double inflation = curve.yValue(t)/100;
-			int age = Period.between(resolvedPolicy.getBirthDate(),provider.getValuationDate()).getYears();
-			double lapse = lapseM.zValue(age+t, valYear+t)/100;
-			return new SimpleMatrix(1,3,true,costF*inflation,0,lapse);
-
-
-		}
-	};			        
+	        
 
 
 	 static final BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix> M =
@@ -302,24 +238,7 @@ public class UnitLInkedPolicyConvention {
 		}
 	};
 
-	 static final BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix> M_F =
-			//is state dependent. This case three states  
-			new BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix>() {
-		@Override
-		public SimpleMatrix apply(Pair<ResolvedPolicy,RatesProvider> data, Double t) {
 
-			RatesProvider provider = data.getSecond();
-			ResolvedPolicy resolvedPolicy = data.getFirst();	
-			int valYear = provider.getValuationDate().getYear();			        
-			int age = Period.between(resolvedPolicy.getBirthDate(),provider.getValuationDate()).getYears();
-			double qx = qxM.zValue(t+age, valYear+t);
-			double lapse = lapseM.zValue(age+t, valYear+t)/100;
-			double portfCorr = pfM.zValue(age+t, valYear+t)/100; 
-			return SimpleMatrix.diag(-(qx*portfCorr+lapse));
-
-
-		}
-	};
 
 	 static final BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix> IR =
 			//only active state  
@@ -336,50 +255,13 @@ public class UnitLInkedPolicyConvention {
 
 		}
 	};			        
-	 static final BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix> IR_F =
-			//only active state  
-			new BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix>() {
-		@Override
-		public SimpleMatrix apply(Pair<ResolvedPolicy,RatesProvider> data, Double t) {
-			RatesProvider provider = data.getSecond();
-			Curve fwdCurve = provider.findData(CurveName.of("ESG")).get();
-			return SimpleMatrix.identity(blockDim).scale(fwdCurve.yValue(t));
-		}
-	};			        
+	        
 
 
 
-	 static final BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix> D_F =
-			new BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix>() {
-		// all differentiation matrices, deliberately dimension equal to one state, as separate D functions  per state may be required 
-
-		@Override
-		public SimpleMatrix apply(Pair<ResolvedPolicy,RatesProvider> data, Double t) {
-			ResolvedPolicy resolvedPolicy = data.getFirst();
-			RatesProvider provider = data.getSecond();
-			double terbeh = resolvedPolicy.getExpenseRateinvestementAccount();
-			double accVal= resolvedPolicy.getInvestementAccount();
-			Curve fwdCurve = provider.findData(CurveName.of("ESG")).get();
-			double fwd1= fwdCurve.yValue(t);
-			double scaleVal=1d/accVal;
-			int age = Period.between(resolvedPolicy.getBirthDate(),provider.getValuationDate()).getYears();
-			int valYear = provider.getValuationDate().getYear();
-			double qx = qxM.zValue(t+age, valYear+t);
-			double tar = tar220.zValue(age+t, valYear+t);
-			//fund
-			SimpleMatrix s3DerivFirstS = firstOrder.get(0).scale(scaleVal);
-			List<double[]> cop = Collections.nCopies(blockDim, vectors.get(0).multipliedBy(accVal).multipliedBy(-terbeh -tar*qx + fwd1).toArray());
-			double[] vals = cop.stream().flatMapToDouble(x -> Arrays.stream(x)).toArray();
-			SimpleMatrix sm1 = new SimpleMatrix(blockDim, blockDim, false, vals);
-			SimpleMatrix fundD=s3DerivFirstS.elementMult(sm1);
-			// only fund 
-			SimpleMatrix Dt = fundD;
-			return Dt;
-			//        return SimpleMatrix.filled(blockDim*3, blockDim*3,0d).combine(0, 0, Dt).
-			//          		 combine(blockDim, blockDim, Dt).combine(blockDim*2, blockDim*2, Dt);
-		}
-	};
+	
 	 static SimpleMatrix preD= firstOrder.get(1).plus(firstOrder.get(2)).plus(secondOrder.get(0)).plus(secondOrder.get(1));
+	
 	 static final BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix> D =
 			new BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix>() {
 		// all differentiation matrices, deliberately dimension equal to one state, as separate D functions  per state may be required 
@@ -458,5 +340,50 @@ public class UnitLInkedPolicyConvention {
 			return SimpleMatrix.filled(blockDim,blockDim,0d);
 		}
 	};
+	public static Surface addRefDatafromCSV(String csv, String name) {
+
+		CsvIterator mortalityrates= CsvIterator.of(ResourceLocator.of("classpath:referenceData/" + csv).getCharSource(), true);
+		ArrayList<Integer> AGE = new ArrayList<Integer>();
+		ArrayList<Integer> YEAR =new ArrayList<Integer>();
+		ArrayList<Double> RATE = new ArrayList<Double>();;
+		for (CsvRow row : mortalityrates.asIterable()) {
+			//Currency  cur= row.getValue(CURRENCY_FIELD, LoaderUtils::parseCurrency);
+			YEAR.add(row.getValue("YEAR", LoaderUtils::parseInteger));
+			AGE.add(row.getValue("AGE",LoaderUtils::parseInteger));
+			RATE.add(row.getValue("rate",LoaderUtils::parseDouble));
+		}
+
+		final SurfaceInterpolator INTERPOLATOR_2D = GridSurfaceInterpolator.of(LINEAR, LINEAR);
+
+		final List<ParameterMetadata> PARAMETER_METADATA =
+				MapStream.zip(AGE.stream(), YEAR.stream())
+				.map(SwaptionSurfaceExpiryTenorParameterMetadata::of)
+				.collect(toList());
+		final SurfaceMetadata METADATA =
+				Surfaces.normalVolatilityByExpiryTenor(name, ACT_365F);
+
+		final Surface SURFACE_STD = InterpolatedNodalSurface.of(
+				METADATA.withParameterMetadata(PARAMETER_METADATA),
+				DoubleArray.copyOf(AGE.stream().mapToDouble(num -> (double)num).toArray()),
+				DoubleArray.copyOf(YEAR.stream().mapToDouble(num -> (double)num).toArray()),	
+				DoubleArray.copyOf(RATE.stream() //we start with a stream of objects Stream<int[]>
+						.flatMapToDouble(DoubleStream::of) //we I'll map each int[] to IntStream
+						.toArray()),
+				INTERPOLATOR_2D);
+
+		return SURFACE_STD;
+
+	}
+
+
+	static Surface qxM = addRefDatafromCSV("AG2018_man.csv","AAG-man");
+	static Surface qxF = addRefDatafromCSV("AG2018_vrouw.csv","AAG-vrouw");
+	static Surface pfM = addRefDatafromCSV("PORT_STERFTE_MAN_2019.csv","portf-man");
+	static Surface pfF = addRefDatafromCSV("PORT_STERFTE_VRW_2019.csv","portf-vrouw");
+	static Surface tar207 = addRefDatafromCSV("ZL1001SN.csv","207");
+	static Surface tar220=	 addRefDatafromCSV("PREMTAB21POSNEG.csv","220");
+	static Surface tar221	=addRefDatafromCSV("PREMTAB32NEG.csv","221");
+	static Surface lapseM = addRefDatafromCSV("VERVAL_UL_2019M.csv","verv-man");
+	static Surface lapseF = addRefDatafromCSV("VERVAL_UL_2019V.csv","verv-vrouw");
 
 }

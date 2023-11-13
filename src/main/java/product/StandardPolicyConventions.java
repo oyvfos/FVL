@@ -57,14 +57,14 @@ public final class StandardPolicyConventions {
 
 	
 	private static final UnitLInkedPolicyConvention ul = new UnitLInkedPolicyConvention();
-	private static final UnitFixedPolicyConvention uf = new UnitFixedPolicyConvention();
+	private static final UnitFixedDeterminsiticPolicyConvention uf = new UnitFixedDeterminsiticPolicyConvention();
 	public static final PolicyConvention UNIT_LINKED =
 			ImmutablePolicyConvention.of(
 					"UNIT_LINKED", List.of(ul.IC,ul.D,ul.M, ul.R, ul.IR,ul.Derivative,ul.Ind)
 					);
 	public static final PolicyConvention UNIT_FIXED =
 			ImmutablePolicyConvention.of(
-					"UNIT_FIXED", List.of(ul.IC,ul.D,ul.M, ul.R, ul.IR,ul.Derivative,ul.Ind)
+					"UNIT_FIXED", List.of(uf.IC,uf.D,uf.M, uf.R, uf.IR,uf.D,uf.Ind)
 					);
 
 
