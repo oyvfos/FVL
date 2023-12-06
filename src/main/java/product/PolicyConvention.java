@@ -35,8 +35,8 @@ import com.opengamma.strata.product.TradeInfo;
 import com.opengamma.strata.product.common.BuySell;
 import com.opengamma.strata.product.swap.type.ImmutableFixedOvernightSwapConvention;
 
-import liabilities.DifferentiationMatrix;
-import liabilities.DifferentiationMatrixId;
+import lost.DifferentiationMatrix;
+import lost.DifferentiationMatrixId;
 import utilities.Taylor;
 
 /**

@@ -35,8 +35,8 @@ import com.opengamma.strata.collect.tuple.Pair;
 import com.opengamma.strata.pricer.rate.RatesProvider;
 import com.opengamma.strata.product.TradeInfo;
 
-import liabilities.DifferentiationMatrix;
-import liabilities.DifferentiationMatrixId;
+import lost.DifferentiationMatrix;
+import lost.DifferentiationMatrixId;
 @BeanDefinition
 public final class ImmutablePolicyConvention 
     implements PolicyConvention, ImmutableBean, Serializable {
@@ -56,29 +56,16 @@ public final class ImmutablePolicyConvention
     * @param floatingLeg  the market convention for the floating leg
     * @return the convention
     */
-    public static void main(String[] args) throws IOException, ParseException, ScriptException, URISyntaxException {
-        //test();
-        long start = System.currentTimeMillis();
-        List<Pair<Integer, Integer>> ranges= List.of(Pair.of(-2, 3),Pair.of(-2, 3),Pair.of(-2, 3));
-        //List<Pair<Integer,List<Integer>>> statesDef= List.of(Pair.of(0, List.of(0,1,2)),Pair.of(1, List.of(0)),Pair.of(2, List.of(0)));
-        List<Double> stepsizes= List.of(0.01,.05,.25);
-        //ReferenceData ss = addRefData(ReferenceData.standard(),  ranges, stepsizes);
-        long end = System.currentTimeMillis();
-        //testCalibration();
-        
-    }
-    
-    
-    
+   
     
     @PropertyDefinition(validate = "notNull", overrideGet = false)
-    private final List<BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix>> funcs;
+    private final Map<String ,BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix>> funcs;
     
     
     
     public static ImmutablePolicyConvention of(
       String name,
-      List<BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix>> funcs) {
+      Map<String ,BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix>> funcs) {
         return new ImmutablePolicyConvention(name, funcs);
     }
     public  ReferenceData refData(
@@ -151,11 +138,11 @@ public final class ImmutablePolicyConvention
 
     private ImmutablePolicyConvention(
             String name,
-            List<BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix>> funcs) {
+            Map<String ,BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix>> funcs) {
         JodaBeanUtils.notNull(name, "name");
         JodaBeanUtils.notNull(funcs, "funcs");
         this.name = name;
-        this.funcs = ImmutableList.copyOf(funcs);
+        this.funcs = ImmutableMap.copyOf(funcs);
         validate();
     }
 
@@ -179,7 +166,7 @@ public final class ImmutablePolicyConvention
      * Gets the funcs.
      * @return the value of the property, not null
      */
-    public List<BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix>> getFuncs() {
+    public Map<String ,BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix>> getFuncs() {
         return funcs;
     }
 
@@ -232,8 +219,8 @@ public final class ImmutablePolicyConvention
          * The meta-property for the {@code funcs} property.
          */
         @SuppressWarnings({"unchecked", "rawtypes" })
-        private final MetaProperty<List<BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix>>> funcs = DirectMetaProperty.ofImmutable(
-                this, "funcs", ImmutablePolicyConvention.class, (Class) List.class);
+        private final MetaProperty<Map<String ,BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix>>> funcs = DirectMetaProperty.ofImmutable(
+                this, "funcs", ImmutablePolicyConvention.class, (Class) Map.class);
         /**
          * The meta-properties.
          */
@@ -287,7 +274,7 @@ public final class ImmutablePolicyConvention
          * The meta-property for the {@code funcs} property.
          * @return the meta-property, not null
          */
-        public MetaProperty<List<BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix>>> funcs() {
+        public MetaProperty<Map<String ,BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix>>> funcs() {
             return funcs;
         }
 
@@ -321,7 +308,7 @@ public final class ImmutablePolicyConvention
     public static final class Builder extends DirectFieldsBeanBuilder<ImmutablePolicyConvention> {
 
         private String name;
-        private List<BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix>> funcs = ImmutableList.of();
+        private Map<String ,BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix>> funcs = ImmutableMap.of();
 
         /**
          * Restricted constructor.
@@ -335,7 +322,7 @@ public final class ImmutablePolicyConvention
          */
         private Builder(ImmutablePolicyConvention beanToCopy) {
             this.name = beanToCopy.getName();
-            this.funcs = ImmutableList.copyOf(beanToCopy.getFuncs());
+            this.funcs = ImmutableMap.copyOf(beanToCopy.getFuncs());
         }
 
         //-----------------------------------------------------------------------
@@ -359,7 +346,7 @@ public final class ImmutablePolicyConvention
                     this.name = (String) newValue;
                     break;
                 case 97793583:  // funcs
-                    this.funcs = (List<BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix>>) newValue;
+                    this.funcs = (Map<String ,BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix>>) newValue;
                     break;
                 default:
                     throw new NoSuchElementException("Unknown property: " + propertyName);
@@ -397,21 +384,10 @@ public final class ImmutablePolicyConvention
          * @param funcs  the new value, not null
          * @return this, for chaining, not null
          */
-        public Builder funcs(List<BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix>> funcs) {
+        public Builder funcs(Map<String ,BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix>> funcs) {
             JodaBeanUtils.notNull(funcs, "funcs");
             this.funcs = funcs;
             return this;
-        }
-
-        /**
-         * Sets the {@code funcs} property in the builder
-         * from an array of objects.
-         * @param funcs  the new value, not null
-         * @return this, for chaining, not null
-         */
-        @SafeVarargs
-        public final Builder funcs(BiFunction<Pair<ResolvedPolicy,RatesProvider>, Double, SimpleMatrix>... funcs) {
-            return funcs(ImmutableList.copyOf(funcs));
         }
 
         //-----------------------------------------------------------------------

@@ -1,24 +1,20 @@
 package liabilities;
 
 import java.io.Serializable;
+import java.lang.invoke.MethodHandles;
 
 import org.joda.beans.ImmutableBean;
-import org.joda.beans.gen.BeanDefinition;
-import org.joda.beans.gen.PropertyDefinition;
-
-import com.opengamma.strata.data.MarketDataName;
-import com.opengamma.strata.data.NamedMarketDataId;
-import com.opengamma.strata.data.ObservableSource;
-import com.opengamma.strata.market.curve.CurveGroupName;
-import com.opengamma.strata.market.curve.CurveId;
-import com.opengamma.strata.market.curve.CurveName;
-
-import examples.Setup.ParamaterName;
-import java.lang.invoke.MethodHandles;
 import org.joda.beans.JodaBeanUtils;
 import org.joda.beans.MetaBean;
 import org.joda.beans.TypedMetaBean;
+import org.joda.beans.gen.BeanDefinition;
+import org.joda.beans.gen.PropertyDefinition;
 import org.joda.beans.impl.light.LightMetaBean;
+
+import com.opengamma.strata.data.MarketDataName;
+import com.opengamma.strata.data.NamedMarketDataId;
+
+import examples.Setup.ParamaterName;
 @BeanDefinition(style = "light", cacheHashCode = true)
 public final class  NonObservableId implements NamedMarketDataId<Double>, ImmutableBean, Serializable {
     @PropertyDefinition(validate = "notNull")

@@ -14,11 +14,10 @@ import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.collect.ArgChecker;
 import com.opengamma.strata.collect.tuple.Pair;
 import com.opengamma.strata.market.explain.ExplainMapBuilder;
-import com.opengamma.strata.market.sensitivity.PointSensitivities;
+import com.opengamma.strata.market.param.CurrencyParameterSensitivities;
 import com.opengamma.strata.market.sensitivity.PointSensitivityBuilder;
+import com.opengamma.strata.measure.rate.RatesMarketData;
 import com.opengamma.strata.pricer.rate.RatesProvider;
-import com.opengamma.strata.product.rate.FixedOvernightCompoundedAnnualRateComputation;
-import com.opengamma.strata.product.rate.FixedRateComputation;
 import com.opengamma.strata.product.rate.IborAveragedRateComputation;
 import com.opengamma.strata.product.rate.IborInterpolatedRateComputation;
 import com.opengamma.strata.product.rate.IborRateComputation;
@@ -34,7 +33,6 @@ import com.opengamma.strata.product.rate.OvernightCompoundedRateComputation;
 import product.PolicyComputation;
 import product.ResolvedPolicy;
 import product.ResolvedPolicyTrade;
-import product.StochasticPIDEComputation;
 
 /**
  * Rate computation implementation using multiple dispatch.
@@ -131,11 +129,12 @@ public CurrencyAmount presentValue(PolicyComputation computation,ResolvedPolicyT
 	return null;
 }
 
-public PointSensitivities presentValueSensitivity(PolicyComputation computation, ResolvedPolicyTrade trade, RatesProvider ratesProvider,
+public CurrencyParameterSensitivities presentValueSensitivity(PolicyComputation computation, ResolvedPolicyTrade trade, RatesMarketData md,
 		ReferenceData refData, Pair<SimpleMatrix, SimpleMatrix> diffMat) {
 	if (computation instanceof StochasticPIDEComputation) {
 	      // inline code (performance) avoiding need for FixedRateComputationFn implementation
-	      return ((StochasticPIDEComputation) computation).sensBuilder(trade.getProduct(), ratesProvider, refData,diffMat ).build();}
+	      return ((StochasticPIDEComputation) computation).sensBuilder(trade.getProduct(), md, refData,diffMat );
+	}   		  //.combinedWith(((StochasticPIDEComputation) computation).sensBuilderINF(trade.getProduct(), ratesProvider, refData,diffMat ));}
 	else
 	// TODO Auto-generated method stub
 	return null;

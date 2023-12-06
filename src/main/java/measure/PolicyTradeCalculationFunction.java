@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableSet;
 import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.index.FxIndices;
-import com.opengamma.strata.basics.index.IborIndices;
 import com.opengamma.strata.basics.index.Index;
 import com.opengamma.strata.calc.Measure;
 import com.opengamma.strata.calc.runner.CalculationFunction;
@@ -39,14 +38,15 @@ import com.opengamma.strata.measure.AdvancedMeasures;
 import com.opengamma.strata.measure.Measures;
 import com.opengamma.strata.measure.rate.RatesMarketDataLookup;
 import com.opengamma.strata.measure.rate.RatesScenarioMarketData;
-import com.opengamma.strata.product.rate.RateComputation;
 
+import basics.AssumptionIndex;
+//import basics.ParameterIndices;
 import pricer.DispatchingPolicyComputationFn;
+import pricer.StochasticPIDEComputation;
 import product.Policy;
 import product.PolicyComputation;
 import product.PolicyTrade;
 import product.ResolvedPolicyTrade;
-import product.StochasticPIDEComputation;
 
 /**
  * Perform calculations on a single {@code PolicyTrade} for each of a set of scenarios.
@@ -84,8 +84,8 @@ public class PolicyTradeCalculationFunction
       	  //.put(Measure.of("DIFFMATDet0"), PolicyMeasureCalculations.DEFAULT::diffMatDet0)
           .put(Measures.PRESENT_VALUE, PolicyMeasureCalculations.DEFAULT::presentValue)
           //.put(Measures.EXPLAIN_PRESENT_VALUE, PolicyMeasureCalculations.DEFAULT::explainPresentValue)
-          .put(Measures.PV01_CALIBRATED_SUM, PolicyMeasureCalculations.DEFAULT::pv01CalibratedSum)
-          //.put(Measures.PV01_CALIBRATED_BUCKETED, PolicyMeasureCalculations.DEFAULT::pv01CalibratedBucketed)
+          //.put(Measure.of("presentValueIRSens"), PolicyMeasureCalculations.DEFAULT::pv01CalibratedBucketed)
+          .put(Measures.PV01_CALIBRATED_BUCKETED, PolicyMeasureCalculations.DEFAULT::pv01CalibratedBucketed)
 //          .put(Measures.PV01_MARKET_QUOTE_SUM, PolicyMeasureCalculations.DEFAULT::pv01MarketQuoteSum)
 //          .put(Measures.PV01_MARKET_QUOTE_BUCKETED, PolicyMeasureCalculations.DEFAULT::pv01MarketQuoteBucketed)
 //          .put(Measures.PAR_RATE, PolicyMeasureCalculations.DEFAULT::parRate)
@@ -146,10 +146,13 @@ public class PolicyTradeCalculationFunction
     Policy product = trade.getProduct();
     Set<Index> indices = new HashSet<>();
     indices.add((Index) EU_EXT_CPI);
+    indices.add((Index) AssumptionIndex.of("MortalityRateIndex"));
+    //indices.add((Index) EU_EXT_CPI);
     //indices.add(IborIndices.EUR_LIBOR_3M);
     indices.add(FxIndices.EUR_USD_ECB);//placeholder equity index
     //product.getIndexInterpolated().ifPresent(indices::add);
-    ImmutableSet<Currency> currencies = ImmutableSet.of(Currency.EUR);
+    //Discounting in two 'currencies'
+    ImmutableSet<Currency> currencies = ImmutableSet.of(Currency.EUR,Currency.CHF);
 
     // use lookup to build requirements
     RatesMarketDataLookup ratesLookup = parameters.getParameter(RatesMarketDataLookup.class);

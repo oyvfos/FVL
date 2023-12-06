@@ -12,6 +12,8 @@ import com.opengamma.strata.market.param.ParameterPerturbation;
 import com.opengamma.strata.market.param.ParameterizedData;
 import com.opengamma.strata.product.LegalEntityId;
 
+import lost.MortalityRates;
+
 /**
  * Volatilities for pricing swaptions.
  * <p>

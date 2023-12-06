@@ -6,8 +6,6 @@ import com.opengamma.strata.market.explain.ExplainMapBuilder;
 import com.opengamma.strata.market.sensitivity.PointSensitivityBuilder;
 import com.opengamma.strata.pricer.rate.RatesProvider;
 
-import product.StochasticPIDEComputation;
-
 public class StochasticPIDEComputationFn
 implements PolicyComputationFn<StochasticPIDEComputation> {
 

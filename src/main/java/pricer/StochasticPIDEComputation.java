@@ -1,16 +1,17 @@
-package product;
+package pricer;
 
 import java.io.Serializable;
+import java.time.LocalDate;
 import java.time.Period;
+import java.time.YearMonth;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.NoSuchElementException;
-import java.util.Optional;
+import java.util.Set;
 import java.util.function.BiFunction;
-import java.util.stream.IntStream;
 
 import org.ejml.simple.SimpleMatrix;
 import org.joda.beans.Bean;
@@ -26,32 +27,41 @@ import org.joda.beans.impl.direct.DirectMetaProperty;
 import org.joda.beans.impl.direct.DirectMetaPropertyMap;
 import org.joda.beans.impl.direct.DirectPrivateBeanBuilder;
 
-import com.google.common.base.Function;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
 import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
-import com.opengamma.strata.basics.date.HolidayCalendar;
-import com.opengamma.strata.basics.date.HolidayCalendars;
+import com.opengamma.strata.basics.index.IborIndex;
 import com.opengamma.strata.basics.index.IborIndexObservation;
-import com.opengamma.strata.basics.index.IborIndices;
+import com.opengamma.strata.basics.index.ImmutableIborIndex;
+import com.opengamma.strata.basics.index.ImmutablePriceIndex;
 import com.opengamma.strata.basics.index.Index;
-import com.opengamma.strata.collect.array.DoubleArray;
+import com.opengamma.strata.basics.index.PriceIndex;
+import com.opengamma.strata.basics.index.PriceIndexObservation;
+import com.opengamma.strata.basics.index.PriceIndices;
+import com.opengamma.strata.collect.timeseries.LocalDateDoubleTimeSeries;
 import com.opengamma.strata.collect.tuple.Pair;
-import com.opengamma.strata.market.curve.Curve;
-import com.opengamma.strata.market.curve.CurveName;
-import com.opengamma.strata.market.sensitivity.PointSensitivityBuilder;
-import com.opengamma.strata.market.surface.Surface;
-import com.opengamma.strata.market.surface.SurfaceName;
+import com.opengamma.strata.market.curve.CurveId;
+import com.opengamma.strata.market.param.CurrencyParameterSensitivities;
+import com.opengamma.strata.measure.rate.RatesMarketData;
+import com.opengamma.strata.pricer.rate.IborIndexRates;
 import com.opengamma.strata.pricer.rate.IborRateSensitivity;
+import com.opengamma.strata.pricer.rate.InflationRateSensitivity;
+import com.opengamma.strata.pricer.rate.PriceIndexValues;
 import com.opengamma.strata.pricer.rate.RatesProvider;
 
-import liabilities.DifferentiationMatrixId;
+import basics.AssumptionIndex;
+import basics.AssumptionIndexObservation;
+import basics.AssumptionIndexValues;
+import basics.AssumptionRateSensitivity;
+import basics.ImmutableAssumptionIndex;
 import liabilities.NonObservableId;
-import liabilities.TransitionRatesId;
-import utilities.HWAnalytical;
-import utilities.Taylor;
+import product.ImmutablePolicyConvention;
+import product.PolicyComputation;
+import product.PolicyConvention;
+import product.ResolvedPolicy;
+
+
 @BeanDefinition(builderScope = "private")
 public final class StochasticPIDEComputation
 implements PolicyComputation, ImmutableBean, Serializable {
@@ -81,52 +91,100 @@ implements PolicyComputation, ImmutableBean, Serializable {
   public void collectIndices(ImmutableSet.Builder<Index> builder) {
     // no indices to add
   }
+  public <K, V> Set<K> getKeys(Map<K, V> map, String KeyIn) {
+	    Set<K> keys = new HashSet<>();
+	    for (Entry<K, V> entry : map.entrySet()) {
+	        if (entry.getKey().toString().contains(KeyIn)) {
+	            keys.add(entry.getKey());
+	        }
+	    }
+	    return keys;
+	}
   public CurrencyAmount presentValue(ResolvedPolicy fra, RatesProvider provider, ReferenceData refData, Pair<SimpleMatrix, SimpleMatrix> solutions) {    
 		  int col = solutions.getFirst().getNumCols();
-		  List<BiFunction<Pair<ResolvedPolicy, RatesProvider>, Double, SimpleMatrix>> funcs =  refData
-				  .getValue(DifferentiationMatrixId.of("OG-Ticker", fra.getConvention().getName())).getDifferenationMatrix() ;  
-	      BiFunction<Pair<ResolvedPolicy, RatesProvider>, Double, SimpleMatrix> Indf = funcs.get(6);// fixed place
+		  ImmutablePolicyConvention pc =  (ImmutablePolicyConvention) PolicyConvention.extendedEnum().find(fra.getConvention().getName()).get();
+			 Map<String, BiFunction<Pair<ResolvedPolicy, RatesProvider>, Double, SimpleMatrix>> funcs = pc.getFuncs(); ;  
+		  BiFunction<Pair<ResolvedPolicy, RatesProvider>, Double, SimpleMatrix> Indf = funcs.get("Indicator");
 	      int ind = (int)Indf.apply(Pair.of(fra,provider),0d).get(0, 0);
 		  if (col==1) ind=0;
 		  return CurrencyAmount.of(Currency.EUR, solutions.getFirst().cols(col-1,col).get(ind)*-1);		
 	  }
-  public PointSensitivityBuilder sensBuilder(ResolvedPolicy resolvedPolicy, RatesProvider provider,ReferenceData refData, Pair<SimpleMatrix, SimpleMatrix> diffMat) {
-	  double dt = provider.data(NonObservableId.of("TimeStep"));
-	  if (diffMat.getSecond().getNumRows()==1) return PointSensitivityBuilder.none();
-	  List<BiFunction<Pair<ResolvedPolicy, RatesProvider>, Double, SimpleMatrix>> funcs =  refData
-			  .getValue(DifferentiationMatrixId.of("OG-Ticker", resolvedPolicy.getConvention().getName())).getDifferenationMatrix() ;  
-	  BiFunction<Pair<ResolvedPolicy, RatesProvider>, Double, SimpleMatrix> Der = funcs.get(5);// fixed place
+  public CurrencyParameterSensitivities sensBuilder(ResolvedPolicy resolvedPolicy, RatesMarketData md,ReferenceData refData, Pair<SimpleMatrix, SimpleMatrix> diffMat) {
+	  double dt = md.ratesProvider().data(NonObservableId.of("TimeStep"));
+	  if (diffMat.getSecond().getNumRows()==1) return CurrencyParameterSensitivities.empty();
+	  ImmutablePolicyConvention pc =  (ImmutablePolicyConvention) PolicyConvention.extendedEnum().find(resolvedPolicy.getConvention().getName()).get();
+		 Map<String, BiFunction<Pair<ResolvedPolicy, RatesProvider>, Double, SimpleMatrix>> funcs = pc.getFuncs();
+	  ImmutableSet<Index> ix = md.getLookup().getForwardIndices();
+	  
+	  //ix.
+	  //Set<String> found = getKeys(funcs,"Derivative");
 	  List<Double> l= new ArrayList<Double>();
-	  List<IborRateSensitivity> ps=Lists.newArrayList();
-	  double prevTmp=0;
-	  double tmp=0;
-	  int totalSteps= diffMat.getSecond().getNumCols() ;
-	  //SimpleMatrix fwdDer= Der.apply(Pair.of(resolvedPolicy,provider),0d);
-	  for (int i = 0; i < (totalSteps-1); i++) {
-		  SimpleMatrix fwdDer= Der.apply(Pair.of(resolvedPolicy,provider),(double)i);
-		  prevTmp=tmp;
-		  tmp = diffMat.getSecond().cols(totalSteps-i-2, totalSteps-i-1).transpose().mult(fwdDer).mult(diffMat.getFirst().cols(i, i+1)).get(0,0);//*(-i/(Math.log(discountFactors.discountFactor(i+1))));
-		  l.add(tmp);
-		  IborIndexObservation obs = IborIndexObservation.of(IborIndices.EUR_EURIBOR_3M, provider.getValuationDate().plusMonths((long) (i*12*dt)).minusDays(4), refData);
-		  tmp=(i==0|i==totalSteps-2)?-tmp:tmp;
-		  ps.add(IborRateSensitivity.of(obs, Currency.EUR,  -tmp));
+	  //List<IborRateSensitivity> ps=Lists.newArrayList();
+	  CurrencyParameterSensitivities sens = CurrencyParameterSensitivities.empty();
+	  for (Index entry : ix) {
+		  //match derivatie function name with index name 
+		  if (funcs.keySet().contains(entry.getName().replace("-", "_"))){
+		  BiFunction<Pair<ResolvedPolicy, RatesProvider>, Double, SimpleMatrix> Der = funcs.get(entry.getName().replace("-", "_")); 
+		  //if (entry.contains("IR")) {int s = 0;}; 
+		  double prevTmp=0;
+		  double tmp=0;
+		  int totalSteps= diffMat.getSecond().getNumCols() ;
+		  //SimpleMatrix fwdDer= Der.apply(Pair.of(resolvedPolicy,provider),0d);
+		  for (int i = 0; i < (totalSteps-1); i++) {
+			  SimpleMatrix fwdDer= Der.apply(Pair.of(resolvedPolicy,md.ratesProvider()),(double)i);
+			  prevTmp=tmp;
+			  tmp = diffMat.getSecond().cols(totalSteps-i-2, totalSteps-i-1).transpose().mult(fwdDer).mult(diffMat.getFirst().cols(i, i+1)).get(0,0);//*(-i/(Math.log(discountFactors.discountFactor(i+1))));
+			  l.add(tmp);
+			  tmp=(i==0|i==totalSteps-2)?-tmp:tmp;
+			  if (entry.getClass().equals(ImmutableIborIndex.class)) { 
+				  IborIndexObservation obs = IborIndexObservation.of((IborIndex) entry, md.ratesProvider().getValuationDate().plusMonths((long) (i*12*dt)).minusDays(4), refData);
+				 // ps.add(IborRateSensitivity.of(obs, Currency.EUR,  -tmp));}
+			  		IborIndexRates rates = md.ratesProvider().iborIndexRates((IborIndex) entry);
+			  	  sens = sens.combinedWith(rates.parameterSensitivity((IborRateSensitivity) IborRateSensitivity.of(obs, Currency.EUR,  -tmp)));
+			  }
+//			  	  else 
+			  if (entry.getClass().equals(ImmutablePriceIndex.class)) { 
+				  LocalDate curDate = md.ratesProvider().getValuationDate().plusMonths((long) (i*12*dt)).minusDays(4);
+				  PriceIndexObservation obs = PriceIndexObservation.of(PriceIndices.EU_EXT_CPI, YearMonth.of(curDate.getYear(), curDate.getMonth()));
+				  PriceIndexValues values = md.ratesProvider().priceIndexValues((PriceIndex) entry);
+				  sens = sens.combinedWith(values.parameterSensitivity((InflationRateSensitivity) InflationRateSensitivity.of(obs, Currency.EUR,  -tmp)));
+				  }
+			  if (entry.getClass().equals(ImmutableAssumptionIndex.class)) { 
+				  
+				  LocalDate curDate = md.ratesProvider().getValuationDate().plusMonths((long) (i*12*dt)).minusDays(4);
+				  AssumptionIndexObservation obs = AssumptionIndexObservation.of(AssumptionIndex.of("MortalityRateIndex"), YearMonth.of(curDate.getYear(), curDate.getMonth()));
+				 //CurveId curveId = md.getLookup().getForwardMarketDataIds(entry).;
+				  AssumptionIndexValues values = AssumptionIndexValues.of((AssumptionIndex) entry, md.ratesProvider().getValuationDate(), md.getMarketData().getValue(CurveId.of("EUR-USD","MortalityCurve")), LocalDateDoubleTimeSeries.of(curDate, 0));//md.ratesProvider().AssumptionIndexValues ((AssumptionIndex) entry);
+				  sens = sens.combinedWith(values.parameterSensitivity(AssumptionRateSensitivity.of(obs, Currency.EUR,  -tmp)));
+				  }
+
+		  }
 	  }
+	  }
+    //double sum = l.stream().mapToDouble(f -> f.doubleValue()/10000).sum()*dt;
+    //System.out.println(sum);
+    return sens;
+  }
+  
       
     //double sum = l.stream().mapToDouble(f -> f.doubleValue()/10000).sum()*dt;
     //System.out.println(sum);
-    return PointSensitivityBuilder.of(ps);
-  }
+    
+  
  // Solves the PIDE
   public Pair<SimpleMatrix, SimpleMatrix> diffMat(ResolvedPolicy resolvedPolicy, RatesProvider provider, ReferenceData refData ) {
 	  //long start = System.currentTimeMillis();
-	  List<BiFunction<Pair<ResolvedPolicy, RatesProvider>, Double, SimpleMatrix>> funcs =  refData.getValue(DifferentiationMatrixId.of("OG-Ticker", resolvedPolicy.getConvention().getName())).getDifferenationMatrix() ;
+	 ImmutablePolicyConvention pc =  (ImmutablePolicyConvention) PolicyConvention.extendedEnum().find(resolvedPolicy.getConvention().getName()).get();
+	 Map<String, BiFunction<Pair<ResolvedPolicy, RatesProvider>, Double, SimpleMatrix>> funcs = pc.getFuncs();
+//	  Map<String ,BiFunction<Pair<ResolvedPolicy, RatesProvider>, Double, SimpleMatrix>> funcs =  refData
+//			  .getValue(DifferentiationMatrixId.of("OG-Ticker", resolvedPolicy.getConvention().getName())).getDifferenationMatrix() ;
 	  //List.of(IC,D,M, R,IR, IRDerivative, ind)
-	  BiFunction<Pair<ResolvedPolicy, RatesProvider>, Double, SimpleMatrix> IC = funcs.get(0);//.apply(resolvedPolicy,1.0);
-	  BiFunction<Pair<ResolvedPolicy, RatesProvider>, Double, SimpleMatrix> Df = funcs.get(1);//.apply(resolvedPolicy,1.0);
-	  BiFunction<Pair<ResolvedPolicy, RatesProvider>, Double, SimpleMatrix> Mf = funcs.get(2);//.apply(resolvedPolicy,1.0);
-	  BiFunction<Pair<ResolvedPolicy, RatesProvider>, Double, SimpleMatrix> Rf = funcs.get(3);//.apply(resolvedPolicy,1.0);
-	  BiFunction<Pair<ResolvedPolicy, RatesProvider>, Double, SimpleMatrix> IRf = funcs.get(4);//.apply(resolvedPolicy,1.0);
-	  BiFunction<Pair<ResolvedPolicy, RatesProvider>, Double, SimpleMatrix> Indf = funcs.get(6);//.apply(resolvedPolicy,1.0);    
+	  BiFunction<Pair<ResolvedPolicy, RatesProvider>, Double, SimpleMatrix> IC = funcs.get("InitialCondition");//.apply(resolvedPolicy,1.0);
+	  BiFunction<Pair<ResolvedPolicy, RatesProvider>, Double, SimpleMatrix> Df = funcs.get("DifferentiationMatrix");//.apply(resolvedPolicy,1.0);
+	  BiFunction<Pair<ResolvedPolicy, RatesProvider>, Double, SimpleMatrix> Mf = funcs.get("M-Matrix");//.apply(resolvedPolicy,1.0);
+	  BiFunction<Pair<ResolvedPolicy, RatesProvider>, Double, SimpleMatrix> Rf = funcs.get("R-Matrix");//.apply(resolvedPolicy,1.0);
+	  BiFunction<Pair<ResolvedPolicy, RatesProvider>, Double, SimpleMatrix> IRf = funcs.get("Interest Rate");//.apply(resolvedPolicy,1.0);
+	  BiFunction<Pair<ResolvedPolicy, RatesProvider>, Double, SimpleMatrix> Indf =funcs.get("Indicator");//.apply(resolvedPolicy,1.0);    
 	  int exp = Period.between(provider.getValuationDate(),resolvedPolicy.getExpiryDate()).getYears();
 	  int expM = Period.between(provider.getValuationDate(),resolvedPolicy.getExpiryDate()).getMonths(); 
 	  double dt = provider.data(NonObservableId.of("TimeStep"));
@@ -141,7 +199,7 @@ implements PolicyComputation, ImmutableBean, Serializable {
 	  SimpleMatrix fullY=yS;//yS         
 	  SimpleMatrix fullYadj=ySAdj;        
 	  long start1 = System.currentTimeMillis();   
-	  for (double i = (duration-dt); i > -dt; i=i-dt) {
+	  for (double i = (duration-0*dt); i > 0*-dt; i=i-dt) {
 		  double t=i;
 		  double t1=duration-t; 
 

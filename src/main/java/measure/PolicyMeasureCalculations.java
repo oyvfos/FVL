@@ -1,13 +1,19 @@
 package measure;
 
 import java.util.List;
+import java.util.Set;
 
 import org.ejml.simple.SimpleMatrix;
 
+import com.google.common.collect.ImmutableSet;
 import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.currency.MultiCurrencyAmount;
+import com.opengamma.strata.basics.index.IborIndex;
 import com.opengamma.strata.basics.index.IborIndices;
+import com.opengamma.strata.basics.index.Index;
+import com.opengamma.strata.basics.index.PriceIndex;
+import com.opengamma.strata.basics.index.PriceIndices;
 import com.opengamma.strata.collect.ArgChecker;
 import com.opengamma.strata.collect.tuple.Pair;
 import com.opengamma.strata.data.scenario.CurrencyScenarioArray;
@@ -18,9 +24,12 @@ import com.opengamma.strata.market.curve.CurveName;
 import com.opengamma.strata.market.param.CurrencyParameterSensitivities;
 import com.opengamma.strata.market.sensitivity.PointSensitivities;
 import com.opengamma.strata.market.sensitivity.PointSensitivity;
+import com.opengamma.strata.measure.rate.RatesMarketData;
 import com.opengamma.strata.measure.rate.RatesScenarioMarketData;
 import com.opengamma.strata.pricer.rate.IborIndexRates;
 import com.opengamma.strata.pricer.rate.IborRateSensitivity;
+import com.opengamma.strata.pricer.rate.InflationRateSensitivity;
+import com.opengamma.strata.pricer.rate.PriceIndexValues;
 import com.opengamma.strata.pricer.rate.RatesProvider;
 import com.opengamma.strata.pricer.sensitivity.CurveGammaCalculator;
 import com.opengamma.strata.pricer.sensitivity.MarketQuoteSensitivityCalculator;
@@ -139,18 +148,18 @@ final class PolicyMeasureCalculations {
       RatesProvider ratesProvider,
       ReferenceData refData,
       Pair<SimpleMatrix, SimpleMatrix> diffMat) {
-	  Curve fwdCurve = ratesProvider.findData(CurveName.of("ESG")).get();
-	  double dt = ratesProvider.data(NonObservableId.of("TimeStep"));
-	  PointSensitivities pointSensitivities  = tradePricer.presentValueSensitivity(computation,trade, ratesProvider, refData, diffMat);
-	  CurrencyParameterSensitivities sens = CurrencyParameterSensitivities.empty();
-	  for (PointSensitivity point : pointSensitivities.getSensitivities()) {
-		 IborRateSensitivity pt = (IborRateSensitivity) point;
-	        IborIndexRates rates = IborIndexRates.of(IborIndices.EUR_LIBOR_3M, ratesProvider.getValuationDate(), fwdCurve) ;
-	        sens = sens.combinedWith(rates.parameterSensitivity(pt));
-	        //CurrencyParameterSensitivities.of(pt.build().);
-	  }
+//	  Curve fwdCurve = ratesProvider.findData(CurveName.of("ESG")).get();
+//	  double dt = ratesProvider.data(NonObservableId.of("TimeStep"));
+//	  PointSensitivities pointSensitivities  = tradePricer.presentValueSensitivity(computation,trade, ratesProvider, refData, diffMat);
+//	  CurrencyParameterSensitivities sens = CurrencyParameterSensitivities.empty();
+//	  for (PointSensitivity point : pointSensitivities.getSensitivities()) {
+//		 IborRateSensitivity pt = (IborRateSensitivity) point;
+//	        IborIndexRates rates = IborIndexRates.of(IborIndices.EUR_LIBOR_3M, ratesProvider.getValuationDate(), fwdCurve) ;
+//	        sens = sens.combinedWith(rates.parameterSensitivity(pt));
+//	        //CurrencyParameterSensitivities.of(pt.build().);
+//	  }
 	  //PointSensitivities am = pointSensitivities.;
-    return sens.total().multipliedBy(ONE_BASIS_POINT).multipliedBy(dt);
+    return MultiCurrencyAmount.empty();//sens.total().multipliedBy(ONE_BASIS_POINT).multipliedBy(dt);
 //    CurrencyParameterSensitivities sens = CurrencyParameterSensitivities.empty();
 //    for (PointSensitivity point : pointSensitivity.getSensitivities()) {
 //       CurrencyParameterSensitivities.of(curSens)
@@ -173,28 +182,39 @@ final class PolicyMeasureCalculations {
 
     return ScenarioArray.of(
         marketData.getScenarioCount(),
-        i -> pv01CalibratedBucketed(computation,trade, marketData.scenario(i).ratesProvider(),refData, arr.get(i)));
+        i -> pv01CalibratedBucketed(computation,trade, marketData.scenario(i),refData, arr.get(i)));
   }
 
   // calibrated bucketed PV01 for one scenario
 CurrencyParameterSensitivities pv01CalibratedBucketed(
 		PolicyComputation computation,
 		ResolvedPolicyTrade trade,
-	      RatesProvider ratesProvider,
+	      RatesMarketData md,
 	      ReferenceData refData,
 	      Pair<SimpleMatrix, SimpleMatrix> diffMat) {
-		  Curve fwdCurve = ratesProvider.findData(CurveName.of("ESG")).get();
-		  double dt = ratesProvider.data(NonObservableId.of("TimeStep"));
-		  PointSensitivities pointSensitivities  = tradePricer.presentValueSensitivity(computation,trade, ratesProvider, refData, diffMat);
-		  CurrencyParameterSensitivities sens = CurrencyParameterSensitivities.empty();
-		  for (PointSensitivity point : pointSensitivities.getSensitivities()) {
-			 IborRateSensitivity pt = (IborRateSensitivity) point;
-		        IborIndexRates rates = IborIndexRates.of(IborIndices.EUR_LIBOR_3M, ratesProvider.getValuationDate(), fwdCurve) ;
-		        sens = sens.combinedWith(rates.parameterSensitivity(pt));
+//		  Curve fwdCurve = md.ratesProvider().findData(CurveName.of("ESG")).get();
+//		  Curve infCurve = md.ratesProvider().findData(CurveName.of("EUR-CPI")).get();
+//		  //Set<PriceIndex> pp = ratesProvider().getPriceIndices();
+		  double dt = md.ratesProvider().data(NonObservableId.of("TimeStep"));
+//		  ImmutableSet<Index> ix = md.getLookup().getForwardIndices();
+		  CurrencyParameterSensitivities Psens  = tradePricer.presentValueSensitivity(computation,trade, md, refData, diffMat);
+		  //CurrencyParameterSensitivities sens = CurrencyParameterSensitivities.empty();
+		 // ParameterizedData
+		 // CurrencyParameterSensitivity.of(null, null, null)
+//		  for (PointSensitivity point : pointSensitivities.getSensitivities()) {
+//			  if (point instanceof IborRateSensitivity) {
+//				   IborIndexRates rates = IborIndexRates.of((IborIndex) ix.asList().get(0), md.ratesProvider().getValuationDate(), fwdCurve) ;
+//				   sens = sens.combinedWith(rates.parameterSensitivity((IborRateSensitivity) point));
+//			  } else
+//				  if (point instanceof InflationRateSensitivity) {    
+//					  PriceIndexValues ratesINF = PriceIndexValues.of(PriceIndices.EU_EXT_CPI, md.ratesProvider().getValuationDate(), infCurve,md.ratesProvider().timeSeries(PriceIndices.EU_EXT_CPI)) ;
+//			  		sens = sens.combinedWith(ratesINF.parameterSensitivity((InflationRateSensitivity) point))	;
+//				  }
+//		  	}
 		        //CurrencyParameterSensitivities.of(pt.build().);
-		  }
+
 		  //PointSensitivities am = pointSensitivities.;
-	    return sens.multipliedBy(ONE_BASIS_POINT).multipliedBy(dt);
+	    return Psens.multipliedBy(ONE_BASIS_POINT).multipliedBy(dt);
 
 	  }
 //

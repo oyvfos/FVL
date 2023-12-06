@@ -1,11 +1,8 @@
 package examples;
 
-import static com.opengamma.strata.basics.currency.Currency.EUR;
 import static com.opengamma.strata.basics.currency.Currency.CHF;
 import static com.opengamma.strata.basics.date.DayCounts.ACT_365F;
-import static com.opengamma.strata.basics.index.IborIndices.EUR_EURIBOR_6M;
 import static com.opengamma.strata.basics.index.IborIndices.CHF_LIBOR_6M;
-import static com.opengamma.strata.product.swap.type.FixedIborSwapConventions.EUR_FIXED_1Y_EURIBOR_6M;
 import static com.opengamma.strata.product.swap.type.FixedIborSwapConventions.CHF_FIXED_1Y_LIBOR_6M;
 
 import java.io.IOException;
@@ -13,14 +10,13 @@ import java.net.URISyntaxException;
 import java.text.ParseException;
 import java.time.LocalDate;
 import java.time.Period;
-import java.util.List;
 import java.util.function.BiFunction;
 
 import javax.script.ScriptException;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableList.Builder;
+import com.google.common.collect.ImmutableMap;
 import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.StandardId;
 import com.opengamma.strata.basics.date.DayCount;
@@ -32,22 +28,22 @@ import com.opengamma.strata.data.ImmutableMarketDataBuilder;
 import com.opengamma.strata.loader.csv.QuotesCsvLoader;
 import com.opengamma.strata.market.ValueType;
 import com.opengamma.strata.market.curve.CurveGroupName;
+import com.opengamma.strata.market.curve.CurveMetadata;
 import com.opengamma.strata.market.curve.CurveName;
 import com.opengamma.strata.market.curve.CurveNode;
+import com.opengamma.strata.market.curve.DefaultCurveMetadata;
 import com.opengamma.strata.market.curve.ParameterizedFunctionalCurveDefinition;
 import com.opengamma.strata.market.curve.RatesCurveGroupDefinition;
 import com.opengamma.strata.market.curve.node.FixedIborSwapCurveNode;
 import com.opengamma.strata.market.observable.QuoteId;
-import com.opengamma.strata.market.param.ParameterMetadata;
 import com.opengamma.strata.market.param.TenorParameterMetadata;
-import com.opengamma.strata.math.impl.interpolation.SmithWilsonCurveFunction;
 import com.opengamma.strata.pricer.curve.RatesCurveCalibrator;
 import com.opengamma.strata.product.swap.type.FixedIborSwapTemplate;
 
 
 
 
-public class EIOPA {
+public class MortalityConfig {
 
 	
 	
@@ -74,7 +70,7 @@ public class EIOPA {
 		  //WriteCurvesR(mcurves, "EUR-DSCON-OIS", "ACTIAM");
 		  //WriteCurvesR(mcurves, "EUR-EURIBOR6M-IRS", "ACTIAM");
 			//esr(LocalDate.of(2018, 9, 28));
-			eiopa(LocalDate.of(2016, 12, 30));
+			//eiopa(LocalDate.of(2016, 12, 30));
 		  
 	  }
 	  
@@ -116,16 +112,16 @@ public class EIOPA {
 	    }
 	  }
 ////
-	  public static final SmithWilsonCurveFunction SW_CURVE = SmithWilsonCurveFunction.DEFAULT;
+	  private static final MortalityCurve SW_CURVE = MortalityCurve.DEFAULT;
 	  private static final double ALPHA = 0.136144;
-	  private static final BiFunction<DoubleArray, Double, Double> VALUE_FUNCTION = new BiFunction<DoubleArray, Double, Double>() {
+	  public static final BiFunction<DoubleArray, Double, Double> VALUE_FUNCTION = new BiFunction<DoubleArray, Double, Double>() {
 	    @Override
 	    public Double apply(DoubleArray t, Double u) {
 	    	// t= weights, u = x
 	      return SW_CURVE.value(u, ALPHA, DoubleArray.copyOf(NODE_TIMES), t);
 	    }
 	  };
-	  private static final BiFunction<DoubleArray, Double, Double> DERIVATIVE_FUNCTION =
+	  public static final BiFunction<DoubleArray, Double, Double> DERIVATIVE_FUNCTION =
 	      new BiFunction<DoubleArray, Double, Double>() {
 	        @Override
 	        public Double apply(DoubleArray t, Double u) {
@@ -133,7 +129,7 @@ public class EIOPA {
 	        }
 	      };
 	      
-	  private static final BiFunction<DoubleArray, Double, DoubleArray> SENSI_FUNCTION =
+	  public static final BiFunction<DoubleArray, Double, DoubleArray> SENSI_FUNCTION =
 	      new BiFunction<DoubleArray, Double, DoubleArray>() {
 	        @Override
 	        public DoubleArray apply(DoubleArray t, Double u) {
@@ -152,10 +148,18 @@ public class EIOPA {
 	  
 	 
 	  private static LocalDate VAL_DATE = LocalDate.of(2020, 6, 30);
+	  
+	  static final CurveMetadata meta = DefaultCurveMetadata.builder()
+      .curveName(CurveName.of("MortalityCurve"))
+      .xValueType(ValueType.MONTHS)
+      .yValueType(ValueType.PRICE_INDEX)
+      .dayCount(CURVE_DC)
+      .parameterMetadata(TenorsMD.build())
+      .build();
 	 static final ParameterizedFunctionalCurveDefinition CURVE_DEFN = ParameterizedFunctionalCurveDefinition.builder()
 				      .name(CURVE_NAME)
 				      .xValueType(ValueType.YEAR_FRACTION)
-				      .yValueType(ValueType.DISCOUNT_FACTOR)
+				      .yValueType(ValueType.FORWARD_RATE)
 				      .dayCount(CURVE_DC)
 				      .initialGuess(DoubleArray.filled(FWD6_NB_NODES, 0d).toList())
 				      .valueFunction(VALUE_FUNCTION)

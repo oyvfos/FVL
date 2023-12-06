@@ -48,8 +48,6 @@ import com.opengamma.strata.basics.date.DayCounts;
 import com.opengamma.strata.basics.date.DaysAdjustment;
 import com.opengamma.strata.basics.date.HolidayCalendarIds;
 import com.opengamma.strata.basics.index.FxIndices;
-import com.opengamma.strata.basics.index.IborIndex;
-import com.opengamma.strata.basics.index.IborIndices;
 import com.opengamma.strata.basics.index.Index;
 import com.opengamma.strata.basics.schedule.Frequency;
 import com.opengamma.strata.basics.schedule.PeriodicSchedule;
@@ -62,7 +60,6 @@ import com.opengamma.strata.calc.marketdata.MarketDataConfig;
 import com.opengamma.strata.calc.marketdata.MarketDataFilter;
 import com.opengamma.strata.calc.marketdata.MarketDataFunction;
 import com.opengamma.strata.calc.marketdata.MarketDataRequirements;
-import com.opengamma.strata.calc.marketdata.PerturbationMapping;
 import com.opengamma.strata.calc.marketdata.ScenarioDefinition;
 import com.opengamma.strata.calc.runner.CalculationFunctions;
 import com.opengamma.strata.collect.ArgChecker;
@@ -88,10 +85,10 @@ import com.opengamma.strata.market.curve.Curve;
 import com.opengamma.strata.market.curve.CurveGroupName;
 import com.opengamma.strata.market.curve.CurveId;
 import com.opengamma.strata.market.curve.CurveName;
-import com.opengamma.strata.market.curve.CurveParallelShifts;
 import com.opengamma.strata.market.curve.Curves;
 import com.opengamma.strata.market.curve.InterpolatedNodalCurve;
 import com.opengamma.strata.market.curve.LegalEntityGroup;
+import com.opengamma.strata.market.curve.ParameterizedFunctionalCurve;
 import com.opengamma.strata.market.curve.RatesCurveGroupDefinition;
 import com.opengamma.strata.market.curve.RepoGroup;
 import com.opengamma.strata.market.curve.interpolator.CurveInterpolator;
@@ -100,18 +97,14 @@ import com.opengamma.strata.market.observable.IndexQuoteId;
 import com.opengamma.strata.market.observable.QuoteId;
 import com.opengamma.strata.market.param.LabelDateParameterMetadata;
 import com.opengamma.strata.market.param.ParameterMetadata;
-import com.opengamma.strata.market.param.ParameterizedData;
 import com.opengamma.strata.market.param.PointShifts;
 import com.opengamma.strata.market.param.PointShiftsBuilder;
 import com.opengamma.strata.measure.Measures;
 import com.opengamma.strata.measure.StandardComponents;
 import com.opengamma.strata.measure.bond.LegalEntityDiscountingMarketDataLookup;
 import com.opengamma.strata.measure.rate.RatesMarketDataLookup;
-import com.opengamma.strata.measure.swaption.SwaptionMarketDataLookup;
-import com.opengamma.strata.pricer.DiscountFactors;
 import com.opengamma.strata.pricer.curve.RatesCurveCalibrator;
 import com.opengamma.strata.pricer.rate.ImmutableRatesProvider;
-import com.opengamma.strata.pricer.swaption.SwaptionVolatilitiesId;
 import com.opengamma.strata.product.LegalEntityId;
 import com.opengamma.strata.product.SecurityId;
 import com.opengamma.strata.product.SecurityInfo;
@@ -123,11 +116,9 @@ import com.opengamma.strata.report.ReportCalculationResults;
 import com.opengamma.strata.report.trade.TradeReport;
 import com.opengamma.strata.report.trade.TradeReportTemplate;
 
-import liabilities.AbsoluteDoubleShift;
+import basics.AssumptionIndex;
 import liabilities.NonObservableId;
 import measure.PolicyTradeCalculationFunction;
-import product.ImmutablePolicyConvention;
-import product.StandardPolicyConventions;
 import umontreal.ssj.rng.MRG31k3p;
 import umontreal.ssj.rng.RandomStream;
 import umontreal.ssj.stochprocess.OrnsteinUhlenbeckProcess;
@@ -159,11 +150,13 @@ public class Setup {
 
 	public static RatesCurveGroupDefinition cfg = configs2.get(GROUP_NAME).toBuilder()
 			.addCurve(EIOPA.CURVE_DEFN, CHF, CHF_LIBOR_6M).build(); // hack:EIOPA in CHF to avoid conflict in discounting assets in EUR
+	
 	//Create lookup from config and add remaining curves
 
 	public static RatesCurveGroupDefinition cfgComplete = cfg.toBuilder()
 			.addForwardCurve(CurveName.of("Equity"), FxIndices.EUR_USD_ECB)
 			.addForwardCurve(CurveName.of("EUR-CPI"), (Index)EU_EXT_CPI)
+			.addForwardCurve(CurveName.of("MortalityCurve"), (AssumptionIndex) AssumptionIndex.of("MortalityRateIndex"))
 			.addDiscountCurve(CurveName.of("ESG"), EUR)//.addDiscountCurve(, (Index)EU_EXT_CPI)
 
 			//.addForwardCurve(CurveName.of("Equity"), FxIndices.EUR_USD_ECB)
@@ -202,13 +195,11 @@ public class Setup {
 
 		//Bond curves and swaption lookups  
 		ImmutableMap<LegalEntityId, RepoGroup> repoGroups = ImmutableMap.<LegalEntityId, RepoGroup>builder()
-				.put(
-						ISSUER_A, GROUP_REPO_V1).build();
+				.put(ISSUER_A, GROUP_REPO_V1).build();
 
 		ImmutableMap<Pair<RepoGroup, Currency>, CurveId> repoCurves = ImmutableMap.<Pair<RepoGroup, Currency>, CurveId>builder()
 				.put(Pair.of(GROUP_REPO_V1, Currency.EUR), REPO_CURVE_ID1)
 				.put(Pair.of(GROUP_REPO_V1, Currency.USD), REPO_CURVE_ID1).build();
-
 		ImmutableMap<LegalEntityId, LegalEntityGroup> issuerGroups = ImmutableMap.of(
 				ISSUER_A, GROUP_ISSUER_V1);
 
@@ -220,17 +211,18 @@ public class Setup {
 		LegalEntityDiscountingMarketDataLookup  LegalEntityLookup = LegalEntityDiscountingMarketDataLookup.of(
 				repoGroups,repoCurves,issuerGroups, issuerCurves);
 
-		SwaptionMarketDataLookup swaptionLookup = SwaptionMarketDataLookup.of(IborIndices.EUR_EURIBOR_6M, SwaptionVolatilitiesId.of("SABR"));
+		//PolicyAssumptionDataLookup assumptionLookup = PolicyAssumptionDataLookup.of(IborIndices.EUR_EURIBOR_6M, SwaptionVolatilitiesId.of("SABR"));
 
 
 		CalculationRunner runner = CalculationRunner.ofMultiThreaded();
 
 		ArrayList<Column> columns = Lists.newArrayList(		        
 				Column.of(Measures.PRESENT_VALUE),
+				//Column.of(Measure.of("presentValueIRSens"))
 				//Column.of(Measures.CASH_FLOWS)
-				//Column.of(Measures.PV01_CALIBRATED_BUCKETED),
+				Column.of(Measures.PV01_CALIBRATED_BUCKETED)
 				//Column.of(Measures1.Z_SPREAD)
-				Column.of(Measures.PV01_CALIBRATED_SUM)
+				//Column.of(Measures.PV01_CALIBRATED_SUM)
 				//Column.of(Measures.PV01_MARKET_QUOTE_SUM)
 				// Column.of(Measures.PV01_MARKET_QUOTE_BUCKETED)
 				);
@@ -253,11 +245,11 @@ public class Setup {
 
 		ImmutableMap<QuoteId, Double> quotesA = QuotesCsvLoader.load(VAL_DATE,ResourceLocator.of("classpath:example-calibration/quotes/quotesALL.csv"));
 		builder.addValueMap(quotesA);
-
+		// Calibrate to market data, create curve instances
 		ImmutableMarketData data = builder.build();
 		ImmutableRatesProvider multicurve = CALIBRATOR.calibrate(cfg, data, REF_DATA);
 
-
+		
 		// add all calibrated curves to market data
 		ImmutableMarketDataBuilder builder1 = ImmutableMarketData.builder(VAL_DATE);
 		multicurve.getCurves().forEach(
@@ -269,11 +261,13 @@ public class Setup {
 		//ImmutableRatesProvider provInfl = ILS.provider();
 		ImmutableMarketDataBuilder builder11 = ImmutableMarketData.builder(VAL_DATE);
 
-
+			
 		//actually creates a forward curve from the discount curve - but not used 
 		Builder<LabelDateParameterMetadata> nodeMetadata = ImmutableList.<LabelDateParameterMetadata>builder();
+		
+		
 		Curve discountCurve = multicurve.findData(CurveName.of("EIOPA")).get();
-
+		
 		double prevDsc=1;
 		double d=4;
 		double[] dr = new double[120*(int)d];
@@ -285,7 +279,8 @@ public class Setup {
 			//sbuilder.append(dr[i]).append(',').append("\n");
 			prevDsc = curDsc;
 
-		}  
+		} 
+		ParameterizedFunctionalCurve mc = ParameterizedFunctionalCurve.of(MortalityConfig.meta, DoubleArray.of(0d), MortalityConfig.VALUE_FUNCTION, MortalityConfig.DERIVATIVE_FUNCTION, MortalityConfig.SENSI_FUNCTION);;
 		//ExportUtils.export(sbuilder.toString(), "C:\\Users\\9318300\\Documents\\projs\\ALMvalidations\\dscRatesEUR.csv");
 		// Used for monte carlo HW (eq or ir) are forwards- move somewhere else?
 
@@ -302,10 +297,12 @@ public class Setup {
 				DoubleArray.copyOf(IntStream.range(0, 120*(int)d).mapToDouble(i->(i/d)).toArray()),
 				DoubleArray.filled(dr.length,0d), // zeros - actual curves from build shifts
 				INTERPOLATOR);
-
+		//builder11.addValue(AssumptionRatesId.of("AAG"), AAG2022MortalityRates.of(null, null, null, null));
+		builder11.addValue(CurveId.of(GROUP_NAME, CurveName.of("EIOPA")), discountCurve);
 		builder11.addValue(CurveId.of(GROUP_NAME, CurveName.of("ESG")), curveESG);
 		builder11.addValue(CurveId.of(GROUP_NAME, CurveName.of("Equity")), curveEQ);
-
+		builder11.addValue(CurveId.of(GROUP_NAME, CurveName.of("MortalityCurve")), mc);
+		builder11.addTimeSeries(IndexQuoteId.of(EU_EXT_CPI), builderFix.build());
 		builder11.addValue(NonObservableId.of("TimeStep"), new Double(.25d)).addValue(NonObservableId.of("BasisPointShift"), new Double(0d));
 		// Various perturbations for additional sensitivities   
 		ScenarioMarketData MARKET_DATA1 = ScenarioMarketData.of(
@@ -348,29 +345,25 @@ public class Setup {
 //				builderP.build()
 //				);
 
-		// Monte carlo scarios
-		PerturbationMapping<ParameterizedData> mapping2 = PerturbationMapping.of(
-				MarketDataFilter.ofName(CurveName.of("ESG")),
-				// no shift for the base scenario, 1bp absolute shift to calibrated curves (forwards)
-				buildShifts(curveESG,1,curveESG));
-		PerturbationMapping<ParameterizedData> mapping3 = PerturbationMapping.of(
-				MarketDataFilter.ofName(CurveName.of("Equity")),
-				// no shift for the base scenario, 1bp absolute shift to calibrated curves (forwards)
-				buildShifts(curveEQ,5,curveESG));
-		ScenarioDefinition scenarioDefinition = ScenarioDefinition.ofMappings(mapping2, mapping3); 
-//		ScenarioDefinition scenarioDefinition = ScenarioDefinition.empty();
+		// Monte carlo scenarios
+//		PerturbationMapping<ParameterizedData> mapping2 = PerturbationMapping.of(
+//				MarketDataFilter.ofName(CurveName.of("ESG")),
+//				// no shift for the base scenario, 1bp absolute shift to calibrated curves (forwards)
+//				buildShifts(curveESG,1,curveESG));
+//		PerturbationMapping<ParameterizedData> mapping3 = PerturbationMapping.of(
+//				MarketDataFilter.ofName(CurveName.of("Equity")),
+//				// no shift for the base scenario, 1bp absolute shift to calibrated curves (forwards)
+//				buildShifts(curveEQ,5,curveESG));
+//		ScenarioDefinition scenarioDefinition = ScenarioDefinition.ofMappings(mapping2, mapping3); 
+		ScenarioDefinition scenarioDefinition = ScenarioDefinition.empty();
 
 
 
 
-		//store policy convention related information   
-		REF_DATA= REF_DATA
-				.combinedWith(((ImmutablePolicyConvention) StandardPolicyConventions.UNIT_LINKED).refData())
-				.combinedWith(((ImmutablePolicyConvention) StandardPolicyConventions.UNIT_FIXED).refData()); 
-
+		
 		//configL=configL.toBuilder().addForwardCurve(ILS.lookup(), (Index) EU_EXT_CPI).build();
 
-		CalculationRules rules = CalculationRules.of(functions, ratesLookup, LegalEntityLookup,swaptionLookup);
+		CalculationRules rules = CalculationRules.of(functions, ratesLookup, LegalEntityLookup);
 		MarketDataRequirements reqs = MarketDataRequirements.of(rules, totPOlTrades, columns, REF_DATA);
 		reqs= MarketDataRequirements.combine(Arrays.asList(reqs,MarketDataRequirements.builder().addValues(bp).addValues(id1).build()));
 		ScenarioMarketData scenarioMarketData =marketDataFactory().createMultiScenario(reqs, MarketDataConfig.empty(), MARKET_DATA1, REF_DATA, scenarioDefinition);

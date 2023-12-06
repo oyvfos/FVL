@@ -33,7 +33,7 @@ public class UnitFixedDeterminsiticPolicyConvention {
 			double terbeh = resolvedPolicy.getExpenseRateinvestementAccount();
 			// develop funds up to including t. for t= 0
 			double y0 = resolvedPolicy.getInvestementAccount();
-			double[] fv = new double[(int) (t/dt)]; 
+			double[] fv = new double[(int) (t/dt)+1]; 
 			for (double i = 0; i < t+dt; i=i+dt) {
 				double qx = ul.qxM.zValue(age+i, valYear+i);
 				double fwd1= fwdCurve.yValue(i);

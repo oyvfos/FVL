@@ -31,9 +31,9 @@ import com.opengamma.strata.loader.csv.TradeCsvParserPlugin;
 import com.opengamma.strata.product.Trade;
 import com.opengamma.strata.product.TradeInfo;
 
+import pricer.StochasticPIDEComputation;
 import product.Policy;
 import product.PolicyTrade;
-import product.StochasticPIDEComputation;
 import product.PolicyConvention;
 
 /**
